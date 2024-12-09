@@ -13,6 +13,10 @@ import Button from "@mui/material/Button";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
 import Fade from "@mui/material/Fade";
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemText from '@mui/material/ListItemText';
+
 
 const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
   const [timeRange, setTimeRange] = useState("30d");
@@ -114,13 +118,24 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
   });
 
   const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
   const open = Boolean(anchorEl);
-  const handleClick = (event) => {
+  const handleClickListItem = (event) => {
     setAnchorEl(event.currentTarget);
+  };
+  const handleMenuItemClick = (event, index, option) => {
+    setSelectedIndex(index);
+    setTimeRange(option);
+    setAnchorEl(null);
   };
   const handleClose = () => {
     setAnchorEl(null);
   };
+  const options = [
+    '30d',
+    '7d',
+    '24h'
+  ];
 
   return (
     <div
@@ -131,79 +146,102 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
         marginTop: "20px",
       }}
     >
-      <div style={{ flex: 1 }}>
-        <h2>{title}</h2>
-        <div>
-          <Button
-            id="fade-button"
-            aria-controls={open ? "fade-menu" : undefined}
-            aria-haspopup="true"
-            aria-expanded={open ? "true" : undefined}
-            onClick={handleClick}
-          >
-            Change Time Range
-          </Button>
-          <Menu
-            id="fade-menu"
-            MenuListProps={{
-              "aria-labelledby": "fade-button",
-            }}
-            anchorEl={anchorEl}
-            open={open}
-            onClose={handleClose}
-            TransitionComponent={Fade}
-          >
-            <MenuItem onClick={() => setTimeRange("30d")}>30d</MenuItem>
-            <MenuItem onClick={() => setTimeRange("7d")}>7d</MenuItem>
-            <MenuItem onClick={() => setTimeRange("24h")}>24h</MenuItem>
-          </Menu>
+        <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+                <h2>{title}</h2>
+                <div>
+                    <List
+                        component="nav"
+                        aria-label="Device settings"
+                        sx={{ bgcolor: 'background.paper' }}
+                    >
+                        <ListItemButton
+                            id="lock-button"
+                            aria-haspopup="listbox"
+                            aria-controls="lock-menu"
+                            aria-label="Select Time Range"
+                            aria-expanded={open ? 'true' : undefined}
+                            onClick={handleClickListItem}
+                            style={{
+                                width: "60px",
+                                border: "1px solid #ccc",
+                                borderRadius: "8px",
+                            }}
+                            >
+                            <ListItemText
+                                secondary={options[selectedIndex]}
+                                style={{justifyContent: "center"}}
+                            />
+                        </ListItemButton>
+                    </List>
+                    <Menu
+                        id="lock-menu"
+                        anchorEl={anchorEl}
+                        open={open}
+                        onClose={handleClose}
+                        MenuListProps={{
+                        'aria-labelledby': 'lock-button',
+                        role: 'listbox',
+                        }}
+                    >
+                        {options.map((option, index) => (
+                        <MenuItem
+                            key={option}
+                            selected={index === selectedIndex}
+                            onClick={(event) => handleMenuItemClick(event, index, option)}
+                        >
+                            {option}
+                        </MenuItem>
+                        ))}
+                    </Menu> 
+                </div>
+            </div>
+            <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis
+                        dataKey="x"
+                        tickFormatter={formatTimestamp} // Condense timestamps
+                        interval={Math.ceil(sampledXData.length / 10)} // Show labels at regular intervals
+                    />
+                    <YAxis />
+                    <Tooltip labelFormatter={formatTimestamp} />
+                    <Legend />
+                    {sampledYDataSeries.map(({ name, color }, idx) => (
+                    <Line
+                        key={name}
+                        type="monotone"
+                        dataKey={name}
+                        stroke={color || `hsl(${(idx * 360) / yDataSeries.length}, 70%, 50%)`}
+                        activeDot={{ r: 8 }}
+                    />
+                    ))}
+                </LineChart>
+            </ResponsiveContainer>
         </div>
-        <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="x"
-              tickFormatter={formatTimestamp} // Condense timestamps
-              interval={Math.ceil(sampledXData.length / 10)} // Show labels at regular intervals
-            />
-            <YAxis />
-            <Tooltip labelFormatter={formatTimestamp} />
-            <Legend />
-            {sampledYDataSeries.map(({ name, color }, idx) => (
-              <Line
-                key={name}
-                type="monotone"
-                dataKey={name}
-                stroke={color || `hsl(${(idx * 360) / yDataSeries.length}, 70%, 50%)`}
-                activeDot={{ r: 8 }}
-              />
-            ))}
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-      <div
+        <div
         style={{
-          width: "200px",
-          marginLeft: "16px",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "flex-end",
+            width: "200px",
+            marginLeft: "16px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "flex-end",
         }}
-      >
-        {Object.entries(stats).map(([title, statList], idx) => (
-          <div key={idx} style={{ marginBottom: "16px" }}>
-            <strong>{title}</strong>
-            <ul style={{ listStyleType: "none", padding: 0 }}>
-              {statList.map((stat, index) => (
-                <li key={index} style={{ marginBottom: "8px" }}>
-                  <span style={{ marginRight: "50px" }}>{stat.label}:</span>
-                  <span>{stat.value}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
+        >
+            {Object.entries(stats).map(([title, statList], idx) => (
+            <div key={idx} style={{ marginBottom: "16px" }}>
+                <strong>{title}</strong>
+                <ul style={{ listStyleType: "none", padding: 0 }}>
+                {statList.map((stat, index) => (
+                    <li key={index} style={{ marginBottom: "8px" }}>
+                    <span style={{ marginRight: "50px" }}>{stat.label}:</span>
+                    <span>{stat.value}</span>
+                    </li>
+                ))}
+                </ul>
+            </div>
+            ))}
+        </div>
     </div>
   );
 };
