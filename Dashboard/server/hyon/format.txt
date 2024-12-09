@@ -1,0 +1,22 @@
+{
+	"data": {
+		"4": {
+        		"cs_id": "4",
+        		"rmse": 1.0471757079110424,
+        		"r2": -0.02153326646070952,
+        		"mae": 0.8656608490404886,
+            		"history": {
+				"time": [# all times for this cs],
+				"totenergydeli" : [# all totenergydelis for this cs]
+			},
+			"predictions": {
+				"time": [# all times for this cs],
+				"totenergydeli" : [# all totenergydelis for this cs]
+			}
+		},
+		...
+	},
+	"processed_time": # time at process completion 
+}
+
+		

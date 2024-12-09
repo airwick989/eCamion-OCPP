@@ -35,11 +35,14 @@ for reading in readings:
         avg = tmp[reading].mean()
         minimum = tmp[reading].min()
         maximum = tmp[reading].max()
+        latest = tmp.loc[tmp['timestamp'].idxmax()]
         cabinet_readings[cabinet][reading[len('sys_'):]]['sys'] = {
             'min': minimum,
             'max': maximum,
-            'avg': avg
+            'avg': avg,
+            'latest': latest[reading]
         }
+
 
 #weather_stats = ws.get_weather_stats()
 with open('weather_stats.json', 'r') as file:

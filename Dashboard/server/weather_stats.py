@@ -1,7 +1,6 @@
 from db import db_helper
 import pandas as pd
 from weatherapi import callapi
-from datetime import datetime
 import json
 
 
@@ -50,25 +49,30 @@ def get_weather_stats():
     weather_stats = {}
     for coord in cabinet_coords:
         hourly_weather = callapi.get_weather_stats(lat=coord[0], long=coord[1], start=str(cabinet_coords[coord]['earliest_timestamp'].date()), end=str(cabinet_coords[coord]['latest_timestamp'].date()))
+        latest = hourly_weather.loc[hourly_weather['date'].idxmax()]
 
-        #convert the list of cabinet ids to a string so it can be used as a key, and reverted later in process_data
+        #convert the list of cabinet ids to a string so it can be used as a key, and reverted later in other script
         weather_stats[" ".join(map(str, cabinet_coords[coord]['cabinets']))] = {
             'temp': {
                 'min': float(hourly_weather['temperature_2m'].min()), 
                 'max': float(hourly_weather['temperature_2m'].max()),
-                'avg': float(hourly_weather['temperature_2m'].mean())
+                'avg': float(hourly_weather['temperature_2m'].mean()),
+                'latest': float(latest['temperature_2m'])
             },
             'humidity': {
                 'min': float(hourly_weather['relative_humidity_2m'].min()),
                 'max': float(hourly_weather['relative_humidity_2m'].max()),
-                'avg': float(hourly_weather['relative_humidity_2m'].mean())
+                'avg': float(hourly_weather['relative_humidity_2m'].mean()),
+                'latest': float(latest['relative_humidity_2m'])
             },
             'dew_point': {
                 'min': float(hourly_weather['dew_point_2m'].min()),
                 'max': float(hourly_weather['dew_point_2m'].max()),
-                'avg': float(hourly_weather['dew_point_2m'].mean())
+                'avg': float(hourly_weather['dew_point_2m'].mean()),
+                'latest': float(latest['dew_point_2m'])
             }
         }
  
-
+    # with open('weather_stats.json', 'w') as json_file:
+    #     json.dump(weather_stats, json_file, indent=4)
     return weather_stats
