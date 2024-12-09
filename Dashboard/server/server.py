@@ -94,6 +94,8 @@ def get_cabinet_health():
     merged_data = interpolate_weather_data(sensordata, hourly_weather)
     data["chartdata"] = {col: merged_data[col].tolist() for col in merged_data.columns}
 
+    data["upuntil"] = cabinet_coords[coords]['latest_timestamp']
+
     return jsonify(data)
 
 

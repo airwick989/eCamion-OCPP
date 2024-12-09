@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -9,12 +9,12 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import Button from '@mui/material/Button';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import Fade from '@mui/material/Fade';
+import Button from "@mui/material/Button";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
+import Fade from "@mui/material/Fade";
 
-const HistoryChart = ({ title, xData, yDataSeries, stats }) => {
+const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
   const [timeRange, setTimeRange] = useState("30d");
 
   // Helper function to round values to the nearest tenth
@@ -37,7 +37,9 @@ const HistoryChart = ({ title, xData, yDataSeries, stats }) => {
 
   // Filter and round data based on time range
   const filterDataByRange = (xData, yDataSeries, range) => {
-    const latestTimestamp = new Date(Math.max(...xData.map((timestamp) => new Date(timestamp).getTime())));
+    const latestTimestamp = new Date(
+      Math.max(...xData.map((timestamp) => new Date(timestamp).getTime()))
+    );
     let rangeStart;
 
     switch (range) {
@@ -70,6 +72,29 @@ const HistoryChart = ({ title, xData, yDataSeries, stats }) => {
 
   const { filteredXData, filteredYDataSeries } = filterDataByRange(xData, yDataSeries, timeRange);
 
+  // Calculate statistics dynamically for each series
+  const calculateStats = (yDataSeries) => {
+    const stats = {};
+    stats.Average = yDataSeries.map(({ name, data }) => ({
+      label: name,
+      value: `${roundToNearestTenth(data.reduce((sum, val) => sum + val, 0) / data.length)} ${unit}`,
+    }));
+
+    stats.Minimum = yDataSeries.map(({ name, data }) => ({
+      label: name,
+      value: `${Math.min(...data)} ${unit}`,
+    }));
+
+    stats.Maximum = yDataSeries.map(({ name, data }) => ({
+      label: name,
+      value: `${Math.max(...data)} ${unit}`,
+    }));
+
+    return stats;
+  };
+
+  const stats = useMemo(() => calculateStats(filteredYDataSeries), [filteredYDataSeries]);
+
   // Downsample xData and yDataSeries
   const maxPoints = 100;
   const sampledXData = downsample(filteredXData, maxPoints);
@@ -98,15 +123,22 @@ const HistoryChart = ({ title, xData, yDataSeries, stats }) => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "row", alignItems: "stretch", marginTop: "20px" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "stretch",
+        marginTop: "20px",
+      }}
+    >
       <div style={{ flex: 1 }}>
         <h2>{title}</h2>
         <div>
           <Button
             id="fade-button"
-            aria-controls={open ? 'fade-menu' : undefined}
+            aria-controls={open ? "fade-menu" : undefined}
             aria-haspopup="true"
-            aria-expanded={open ? 'true' : undefined}
+            aria-expanded={open ? "true" : undefined}
             onClick={handleClick}
           >
             Change Time Range
@@ -114,7 +146,7 @@ const HistoryChart = ({ title, xData, yDataSeries, stats }) => {
           <Menu
             id="fade-menu"
             MenuListProps={{
-              'aria-labelledby': 'fade-button',
+              "aria-labelledby": "fade-button",
             }}
             anchorEl={anchorEl}
             open={open}
@@ -149,7 +181,15 @@ const HistoryChart = ({ title, xData, yDataSeries, stats }) => {
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <div style={{ width: "200px", marginLeft: "16px", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+      <div
+        style={{
+          width: "200px",
+          marginLeft: "16px",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "flex-end",
+        }}
+      >
         {Object.entries(stats).map(([title, statList], idx) => (
           <div key={idx} style={{ marginBottom: "16px" }}>
             <strong>{title}</strong>
