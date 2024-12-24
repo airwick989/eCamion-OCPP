@@ -4,6 +4,7 @@ import SummarySection from "./SummarySection";
 import { Select, MenuItem, InputLabel, CircularProgress } from "@mui/material";
 import CustomFormControl from "./CustomFormControl";
 import HistoryChart from "./HistoryChart";
+import Cookies from "js-cookie";
 
 function roundToNearestTenth(number) {
   return Math.round(number * 10) / 10;
@@ -17,15 +18,30 @@ function CabinetHealth({ cabinets }) {
   const [cabinetDewPoint, setCabinetDewPoint] = useState(null);
   const [outdoorDewPoint, setOutdoorDewPoint] = useState(null);
   const [selectedCabinet, setSelectedCabinet] = useState(
-    Math.min(...Object.keys(cabinets).map(Number))
+    parseInt(Cookies.get("selectedCabinet") || Math.min(...Object.keys(cabinets).map(Number)), 10)
   );
   const [error, setError] = useState(null);
   const [chartHistory, setChartHistory] = useState(null);
   const [upUntil, setUpUntil] = useState(null);
-  const [loading, setLoading] = useState(false);  // New loading state
+  const [loading, setLoading] = useState(false);
+
 
   useEffect(() => {
-    setLoading(true); // Start loading when selectedCabinet changes
+    const handleCabinetChange = (event) => {
+      const newCabinetId = event.detail.cabinetId;
+      setSelectedCabinet(newCabinetId);
+    };
+  
+    window.addEventListener("cabinetChange", handleCabinetChange);
+  
+    return () => {
+      window.removeEventListener("cabinetChange", handleCabinetChange);
+    };
+  }, []);
+
+
+  useEffect(() => {
+    setLoading(true);
     setError(null);
     axios
       .get(`/cabinethealth?cabinetid=${selectedCabinet}`)
@@ -48,14 +64,26 @@ function CabinetHealth({ cabinets }) {
         });
         setUpUntil(upuntil);
 
-        setLoading(false); // Stop loading after data is fetched
+        setLoading(false);
       })
       .catch((err) => {
         console.error(`Error fetching cabinet health data: ${err.message}`);
         setError("Failed to fetch cabinet health data. Please try again later.");
-        setLoading(false); // Stop loading in case of error
+        setLoading(false);
       });
   }, [selectedCabinet]);
+
+  const handleCabinetChange = (event) => {
+    const newCabinetId = event.target.value;
+    setSelectedCabinet(newCabinetId);
+    Cookies.set("selectedCabinet", newCabinetId); // Update cookie
+
+    // Dispatch custom event
+    const cabinetChangeEvent = new CustomEvent("cabinetChange", {
+      detail: { cabinetId: newCabinetId },
+    });
+    window.dispatchEvent(cabinetChangeEvent);
+  };
 
   return (
     <div>
@@ -65,7 +93,7 @@ function CabinetHealth({ cabinets }) {
           <Select
             labelId="cabinet-select-label"
             value={selectedCabinet}
-            onChange={(e) => setSelectedCabinet(e.target.value)}
+            onChange={handleCabinetChange}
           >
             {Object.entries(cabinets).map(([id, cabinet]) => (
               <MenuItem key={id} value={id}>
@@ -74,7 +102,11 @@ function CabinetHealth({ cabinets }) {
             ))}
           </Select>
         </CustomFormControl>
-        {error ? (<p></p>) : loading ? (<p></p>) : (
+        {error ? (
+          <p></p>
+        ) : loading ? (
+          <p></p>
+        ) : (
           <span style={{ color: "grey", fontSize: "14px", marginLeft: "20px" }}>
             Data up until <strong>{upUntil}</strong>. All data is referenced from this time.
           </span>
@@ -95,26 +127,26 @@ function CabinetHealth({ cabinets }) {
           <div style={{ display: "flex", gap: "200px", justifyContent: "left", marginTop: "20px" }}>
             <SummarySection
               title="Temperature"
-              componentLabel="Cabinet Temperature"
-              outdoorLabel="Outdoor Temperature"
-              componentValue={cabinetTemperature}
-              outdoorValue={outdoorTemperature}
+              data={[
+                { label: "Cabinet Temperature", value: cabinetTemperature },
+                { label: "Outdoor Temperature", value: outdoorTemperature }
+              ]}
               unit="°C"
             />
             <SummarySection
               title="Humidity"
-              componentLabel="Cabinet Humidity"
-              outdoorLabel="Outdoor Humidity"
-              componentValue={cabinetHumidity}
-              outdoorValue={outdoorHumidity}
+              data={[
+                { label: "Cabinet Humidity", value: cabinetHumidity },
+                { label: "Outdoor Humidity", value: outdoorHumidity }
+              ]}
               unit="%"
             />
             <SummarySection
               title="Dew Point"
-              componentLabel="Cabinet Dew Point"
-              outdoorLabel="Outdoor Dew Point"
-              componentValue={cabinetDewPoint}
-              outdoorValue={outdoorDewPoint}
+              data={[
+                { label: "Cabinet Dew Point", value: cabinetDewPoint },
+                { label: "Outdoor Dew Point", value: outdoorDewPoint }
+              ]}
               unit="°C"
             />
           </div>

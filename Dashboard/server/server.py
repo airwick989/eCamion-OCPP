@@ -6,6 +6,10 @@ import cabinet_health
 from weatherapi import callapi
 import weather_stats
 import pandas as pd
+from ml_pred import ml_pred
+import os
+import json
+from datetime import datetime
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -19,6 +23,7 @@ powercore = j_health.powercore
 systems_chargers = list(publicsession[['system_id', 'charger_id']].drop_duplicates().itertuples(index=False, name=None))
 publicsystems = db_helper.query_db("public_systems")[["id", "site_name"]]
 esssensor = weather_stats.esssensor
+ml_pass = ml_pred()
 
 
 
@@ -97,6 +102,35 @@ def get_cabinet_health():
     data["upuntil"] = cabinet_coords[coords]['latest_timestamp']
 
     return jsonify(data)
+
+
+
+
+@app.route('/prediction')
+def get_prediction():
+    id = int(request.args.get("cabinetid"))
+    folder_path = "./predictiondata/"
+
+    try:
+        # List all files in the folder
+        for file in os.listdir(folder_path):
+            file_path = f"{folder_path}{file}"
+
+        with open(file_path, 'r') as file:
+            data = json.load(file)
+
+        chartdata = data["data"][str(id)]
+        timestamps = chartdata['history']['time']
+        upuntil = max([datetime.fromisoformat(ts) for ts in timestamps]).isoformat()
+
+        return jsonify({
+            "chartdata": chartdata,
+            "upuntil": upuntil,
+            "processedtime": data['processed_time']
+        })
+    except Exception as e:
+         return jsonify({"error": e}), 400
+
 
 
 

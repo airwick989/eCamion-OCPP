@@ -66,7 +66,7 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
 
     const filteredXData = filteredIndices.map((i) => xData[i]);
     const filteredYDataSeries = yDataSeries.map(({ data, name, color }) => ({
-      data: filteredIndices.map((i) => roundToNearestTenth(data[i])), // Round to nearest tenth
+      data: filteredIndices.map((i) => data[i] !== null ? roundToNearestTenth(data[i]) : null),
       name,
       color,
     }));
@@ -79,23 +79,36 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
   // Calculate statistics dynamically for each series
   const calculateStats = (yDataSeries) => {
     const stats = {};
-    stats.Average = yDataSeries.map(({ name, data }) => ({
-      label: name,
-      value: `${roundToNearestTenth(data.reduce((sum, val) => sum + val, 0) / data.length)} ${unit}`,
-    }));
-
-    stats.Minimum = yDataSeries.map(({ name, data }) => ({
-      label: name,
-      value: `${Math.min(...data)} ${unit}`,
-    }));
-
-    stats.Maximum = yDataSeries.map(({ name, data }) => ({
-      label: name,
-      value: `${Math.max(...data)} ${unit}`,
-    }));
-
+  
+    stats.Average = yDataSeries.map(({ name, data }) => {
+      const validData = data.filter((val) => val !== null); // Exclude null values
+      return {
+        label: name,
+        value: validData.length
+          ? `${roundToNearestTenth(validData.reduce((sum, val) => sum + val, 0) / validData.length)} ${unit}`
+          : "N/A", // Handle case where no valid data exists
+      };
+    });
+  
+    stats.Minimum = yDataSeries.map(({ name, data }) => {
+      const validData = data.filter((val) => val !== null); // Exclude null values
+      return {
+        label: name,
+        value: validData.length ? `${Math.min(...validData)} ${unit}` : "N/A",
+      };
+    });
+  
+    stats.Maximum = yDataSeries.map(({ name, data }) => {
+      const validData = data.filter((val) => val !== null); // Exclude null values
+      return {
+        label: name,
+        value: validData.length ? `${Math.max(...validData)} ${unit}` : "N/A",
+      };
+    });
+  
     return stats;
   };
+  
 
   const stats = useMemo(() => calculateStats(filteredYDataSeries), [filteredYDataSeries]);
 

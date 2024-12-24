@@ -4,6 +4,7 @@ import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Box from '@mui/material/Box';
 import CabinetHealth from './CabinetHealth';
+import Prediction from './Prediction';
 
 function CustomTabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -11,12 +12,14 @@ function CustomTabPanel(props) {
   return (
     <div
       role="tabpanel"
-      hidden={value !== index}
       id={`simple-tabpanel-${index}`}
       aria-labelledby={`simple-tab-${index}`}
+      style={{
+        display: value === index ? 'block' : 'none', // Keep the component mounted but hide it when inactive
+      }}
       {...other}
     >
-      {value === index && <Box sx={{ p: 4 }}>{children}</Box>}
+      {children}
     </div>
   );
 }
@@ -43,7 +46,7 @@ export default function BasicTabs({ cabinets }) {
   
     return (
       <Box sx={{ width: '100%' }}>
-        <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: '20px' }}>
           <Tabs value={value} onChange={handleChange} aria-label="basic tabs example">
             <Tab label="Cabinet Health" {...a11yProps(0)} />
             <Tab label="Module Health" {...a11yProps(1)} />
@@ -62,7 +65,7 @@ export default function BasicTabs({ cabinets }) {
           Item Three
         </CustomTabPanel>
         <CustomTabPanel value={value} index={3}>
-          Item Four
+          <Prediction cabinets={cabinets} />
         </CustomTabPanel>
       </Box>
     );
