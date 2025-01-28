@@ -5,6 +5,7 @@ import Tab from '@mui/material/Tab';
 import Box from '@mui/material/Box';
 import CabinetHealth from './CabinetHealth';
 import Prediction from './Prediction';
+import Jhealth from './Jhealth';
 
 function CustomTabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -49,8 +50,8 @@ export default function BasicTabs({ cabinets }) {
         <Box sx={{ borderBottom: 1, borderColor: 'divider', marginBottom: '20px' }}>
           <Tabs value={value} onChange={handleChange} aria-label="basic tabs example">
             <Tab label="Cabinet Health" {...a11yProps(0)} />
-            <Tab label="Module Health" {...a11yProps(1)} />
-            <Tab label="J Health" {...a11yProps(2)} />
+            <Tab label="J Health" {...a11yProps(1)} />
+            <Tab label="Module Health" {...a11yProps(2)} />
             <Tab label="Prediction" {...a11yProps(3)} />
           </Tabs>
         </Box>
@@ -59,7 +60,7 @@ export default function BasicTabs({ cabinets }) {
           <CabinetHealth cabinets={cabinets} />
         </CustomTabPanel>
         <CustomTabPanel value={value} index={1}>
-          Item Two
+          <Jhealth cabinets={cabinets}/>
         </CustomTabPanel>
         <CustomTabPanel value={value} index={2}>
           Item Three

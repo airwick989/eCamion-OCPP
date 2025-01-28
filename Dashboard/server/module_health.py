@@ -66,4 +66,3 @@ def get_module_history(cabinet, string, module):
     modulehistory = db_helper.populate_and_filter(modulehistory, columns)
     
     return modulehistory
-

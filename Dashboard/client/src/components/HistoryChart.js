@@ -16,10 +16,14 @@ import Fade from "@mui/material/Fade";
 import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
+import TextField from "@mui/material/TextField";
 
 
 const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
   const [timeRange, setTimeRange] = useState("30d");
+  const [customStartDate, setCustomStartDate] = useState(null);
+  const [customEndDate, setCustomEndDate] = useState(null);
+  const [isCustomRange, setIsCustomRange] = useState(false);
 
   // Helper function to round values to the nearest tenth
   const roundToNearestTenth = (value) => Math.round(value * 10) / 10;
@@ -36,7 +40,7 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
     if (timeRange === "24h") {
       return `${date.getHours()}:00`; // Show hours only for 24-hour range
     }
-    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`; // MM/DD/YYYY format
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${date.getHours()}:00`; // MM/DD/YYYY format
   };
 
   // Filter and round data based on time range
@@ -45,6 +49,32 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
       Math.max(...xData.map((timestamp) => new Date(timestamp).getTime()))
     );
     let rangeStart;
+
+    if (range === "custom") {
+      if (!customStartDate || !customEndDate) return { filteredXData: [], filteredYDataSeries: [] };
+
+      const customStart = new Date(customStartDate).getTime();
+      const customEnd = new Date(customEndDate).getTime();
+      if (customStart > customEnd) return { filteredXData: [], filteredYDataSeries: [] };
+
+      const filteredIndices = xData
+        .map((timestamp, index) => ({ timestamp, index }))
+        .filter(
+          ({ timestamp }) =>
+            new Date(timestamp).getTime() >= customStart &&
+            new Date(timestamp).getTime() <= customEnd
+        )
+        .map(({ index }) => index);
+
+      const filteredXData = filteredIndices.map((i) => xData[i]);
+      const filteredYDataSeries = yDataSeries.map(({ data, name, color }) => ({
+        data: filteredIndices.map((i) => (data[i] !== null ? roundToNearestTenth(data[i]) : null)),
+        name,
+        color,
+      }));
+
+      return { filteredXData, filteredYDataSeries };
+    }
 
     switch (range) {
       case "24h":
@@ -74,7 +104,7 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
     return { filteredXData, filteredYDataSeries };
   };
 
-  const { filteredXData, filteredYDataSeries } = filterDataByRange(xData, yDataSeries, timeRange);
+  const { filteredXData, filteredYDataSeries } = filterDataByRange(xData, yDataSeries, isCustomRange ? "custom" : timeRange);
 
   // Calculate statistics dynamically for each series
   const calculateStats = (yDataSeries) => {
@@ -139,6 +169,7 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
   const handleMenuItemClick = (event, index, option) => {
     setSelectedIndex(index);
     setTimeRange(option);
+    setIsCustomRange(option === "custom");
     setAnchorEl(null);
   };
   const handleClose = () => {
@@ -147,7 +178,8 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
   const options = [
     '30d',
     '7d',
-    '24h'
+    '24h',
+    "custom"
   ];
 
   return (
@@ -176,7 +208,7 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
                             aria-expanded={open ? 'true' : undefined}
                             onClick={handleClickListItem}
                             style={{
-                                width: "60px",
+                                width: "90px",
                                 border: "1px solid #ccc",
                                 borderRadius: "8px",
                             }}
@@ -209,13 +241,35 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
                     </Menu> 
                 </div>
             </div>
+
+
+            {isCustomRange && (
+              <div style={{marginBottom: '20px'}}>
+                <TextField
+                  type="date"
+                  label="Start Date"
+                  value={customStartDate || ""}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  type="date"
+                  label="End Date"
+                  value={customEndDate || ""}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </div>
+            )}
+
+
             <ResponsiveContainer width="100%" height={400}>
                 <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis
                         dataKey="x"
                         tickFormatter={formatTimestamp} // Condense timestamps
-                        interval={Math.ceil(sampledXData.length / 10)} // Show labels at regular intervals
+                        interval={Math.ceil(sampledXData.length / 8)} // Show labels at regular intervals, with a max of 8 labels on the X Axis
                     />
                     <YAxis />
                     <Tooltip labelFormatter={formatTimestamp} />
@@ -243,7 +297,10 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
         >
             {Object.entries(stats).map(([title, statList], idx) => (
             <div key={idx} style={{ marginBottom: "16px" }}>
-                <strong>{title}</strong>
+                <div>
+                  <strong style={{ display: 'inline' }}>{title} </strong>
+                  <p style={{ display: 'inline', margin: 0 , color: 'grey'}}>({timeRange})</p>
+                </div>
                 <ul style={{ listStyleType: "none", padding: 0 }}>
                 {statList.map((stat, index) => (
                     <li key={index} style={{ marginBottom: "8px" }}>

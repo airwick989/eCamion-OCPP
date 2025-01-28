@@ -44,9 +44,20 @@ def get_stations():
 
 
 def interpolate_weather_data(sensordata, weatherdata):
-    # Ensure both timestamp columns are in datetime format and have the same timezone
-    sensordata['timestamp'] = pd.to_datetime(sensordata['timestamp']).dt.tz_convert(None)
-    weatherdata['date'] = pd.to_datetime(weatherdata['date']).dt.tz_convert(None)
+    import pandas as pd
+    
+    # Ensure both timestamp columns are in datetime format
+    sensordata['timestamp'] = pd.to_datetime(sensordata['timestamp'])
+    weatherdata['date'] = pd.to_datetime(weatherdata['date'])
+    
+    # Handle timezone-naive and timezone-aware timestamps
+    if sensordata['timestamp'].dt.tz is None:
+        sensordata['timestamp'] = sensordata['timestamp'].dt.tz_localize('GMT')
+    sensordata['timestamp'] = sensordata['timestamp'].dt.tz_convert(None)
+    
+    if weatherdata['date'].dt.tz is None:
+        weatherdata['date'] = weatherdata['date'].dt.tz_localize('GMT')
+    weatherdata['date'] = weatherdata['date'].dt.tz_convert(None)
     
     # Set the 'date' column in weatherdata as the index
     weatherdata = weatherdata.set_index('date')
@@ -62,7 +73,9 @@ def interpolate_weather_data(sensordata, weatherdata):
 
     # Use reindex to align timestamps and fill missing values safely
     for column in ['temperature_2m', 'relative_humidity_2m', 'dew_point_2m', 'precipitation']:
-        sensordata_weather[column] = weatherdata_interp[column].reindex(sensordata_weather.index, method='nearest', tolerance='1T')
+        sensordata_weather[column] = weatherdata_interp[column].reindex(
+            sensordata_weather.index, method='nearest', tolerance='1T'
+        )
 
     # Reset index to restore the 'timestamp' column
     sensordata_weather = sensordata_weather.reset_index()
@@ -130,7 +143,60 @@ def get_prediction():
         })
     except Exception as e:
          return jsonify({"error": e}), 400
+    
 
+
+
+@app.route('/jsummaries')
+def get_jsummaries():
+    id = int(request.args.get("cabinetid"))
+
+    try:
+        j_summaries = j_health.get_j_summaries(id)
+
+        cabinet_coords = weather_stats.get_coords()
+        for coord in cabinet_coords:
+            if id in cabinet_coords[coord]['cabinets']:
+                coords = coord
+      
+        data = {
+            "jsummaries": j_summaries,
+            "upuntil": cabinet_coords[coords]['latest_timestamp'],
+        }
+        return jsonify(data)
+    except Exception as e:
+         return jsonify({"error": e}), 400
+    
+
+
+
+@app.route('/jdata')
+def get_jdata():
+    cabid = int(request.args.get("cabinetid"))
+    jid = int(request.args.get("chargerid"))
+
+    try:
+
+        cabinet_coords = weather_stats.get_coords()
+        for coord in cabinet_coords:
+            if cabid in cabinet_coords[coord]['cabinets']:
+                coords = coord
+                break
+        hourly_weather = callapi.get_weather_stats(lat=coords[0], long=coords[1], start=str(cabinet_coords[coords]['earliest_timestamp'].date()), end=str(cabinet_coords[coords]['latest_timestamp'].date()))
+
+        data = j_health.get_j_data(cabid, jid)
+        merged_data = interpolate_weather_data( data["chartdata"], hourly_weather)
+        chartdata = {col: merged_data[col].tolist() for col in merged_data.columns}
+        
+        tabledata = {col: data["tabledata"][col].tolist() for col in data["tabledata"].columns}
+
+        j_data = {
+            "chartdata": chartdata,
+            "tabledata": tabledata
+        }
+        return jsonify(j_data)
+    except Exception as e:
+         return jsonify({"error": e}), 400
 
 
 

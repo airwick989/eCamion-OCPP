@@ -1,23 +1,24 @@
 import React, { useState, useEffect } from "react";
 import axios from "../services/api";
 import SummarySection from "./SummarySection";
-import { Select, MenuItem, InputLabel, CircularProgress } from "@mui/material";
+import { Select, MenuItem, InputLabel, CircularProgress, Grid, Container, Typography } from "@mui/material";
 import CustomFormControl from "./CustomFormControl";
 import HistoryChart from "./HistoryChart";
 import Cookies from "js-cookie";
+import ExpandingCard from "./ExpandingCard";
 
 function roundToNearestThousandth(number) {
   return Math.round(number * 1000) / 1000;
 }
 
-function Prediction({ cabinets }) {
+function Jhealth({ cabinets }) {
   const [selectedCabinet, setSelectedCabinet] = useState(
     parseInt(Cookies.get("selectedCabinet") || Math.min(...Object.keys(cabinets).map(Number)), 10)
   );
   const [error, setError] = useState(null);
-  const [chartHistory, setChartHistory] = useState(null);
+  const [summaryData, setSummaryData] = useState(null);
+  const [jData, setJData] = useState(null);
   const [upUntil, setUpUntil] = useState(null);
-  const [processedTime, setProcessedTime] = useState(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -38,22 +39,11 @@ function Prediction({ cabinets }) {
     setLoading(true);
     setError(null);
     axios
-      .get(`/prediction?cabinetid=${selectedCabinet}`)
+      .get(`/jsummaries?cabinetid=${selectedCabinet}`)
       .then((response) => {
-        const chartdata = response.data["chartdata"];
-        const historylength = chartdata["history"]["time"].length;
-        const predictionlength = chartdata["predictions"]["time"].length;
-  
-        setChartHistory({
-          timestamp: chartdata["history"]["time"].concat(chartdata["predictions"]["time"]),
-          history: chartdata["history"]["totenergydeli"].concat(Array(predictionlength).fill(null)),
-          prediction: Array(historylength).fill(null).concat(chartdata["predictions"]["totenergydeli"]),
-          rmse: chartdata["rmse"],
-          r2: chartdata["r2"],
-          mae: chartdata["mae"],
-        });
+        setSummaryData(response.data["jsummaries"]);
+
         setUpUntil(response.data["upuntil"]);
-        setProcessedTime(response.data["processedtime"]);
         setLoading(false);
       })
       .catch((err) => {
@@ -99,7 +89,7 @@ function Prediction({ cabinets }) {
           <p></p>
         ) : (
           <span style={{ color: "grey", fontSize: "14px", marginLeft: "20px" }}>
-            Data up until <strong>{upUntil}</strong>. ML predictions were last processed on <strong>{processedTime}</strong>. Data points are predicted at <strong>2 hour</strong> intervals.
+            Data up until <strong>{upUntil}</strong>.
           </span>
         )}
       </div>
@@ -114,33 +104,32 @@ function Prediction({ cabinets }) {
         </div>
       ) : (
         <>
-          <div style={{ display: "flex", gap: "200px", justifyContent: "left", marginTop: "20px" }}>
-            {chartHistory && chartHistory.rmse && chartHistory.r2 && chartHistory.mae !== undefined && (
-              <SummarySection
-                title="3 Days forecast"
-                data={[
-                  { label: "RMSE", value: roundToNearestThousandth(chartHistory["rmse"]) },
-                  { label: "R2", value: roundToNearestThousandth(chartHistory["r2"]) },
-                  { label: "MAE", value: roundToNearestThousandth(chartHistory["mae"]) },
-                ]}
-              />
-            )}
-          </div>
-          {chartHistory && chartHistory.timestamp && (
-            <HistoryChart
-              title={"Energy Delivered (kWh) over Time"}
-              unit={"kWh"}
-              xData={chartHistory["timestamp"]}
-              yDataSeries={[
-                { data: chartHistory["history"], name: "Historical", color: "#8884d8" },
-                { data: chartHistory["prediction"], name: "Predicted", color: "#ff7300" },
-              ]}
-            />
-          )}
+            <Container sx={{ mt: 4 }}>
+                <Typography variant="h4" align="center" gutterBottom>
+                    J Health Statistics
+                </Typography>
+                {summaryData ? (
+                    <Grid container spacing={4}>
+                        {Object.entries(summaryData).map(([id, { sessions, totalsessiontime }]) => (
+                            <Grid item xs={12} sm={6} md={4} key={id}>
+                                <ExpandingCard
+                                    cabid={selectedCabinet}
+                                    jid={id}
+                                    sessions={sessions}
+                                    totalsessiontime={totalsessiontime}
+                                    upuntil={upUntil}
+                                />
+                            </Grid>
+                        ))}
+                    </Grid>
+                ) : (
+                    <Typography align="center">Loading...</Typography>
+                )}
+            </Container>
         </>
       )}
     </div>
   );
 }
 
-export default Prediction;
+export default Jhealth;

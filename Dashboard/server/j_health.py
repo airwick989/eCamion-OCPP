@@ -45,3 +45,32 @@ publicsession = db_helper.populate_and_filter(publicsession, publicsession_colum
 
 publicsession = publicsession.sort_values(by='end_time')
 powercore = powercore.sort_values(by='timestamp')
+
+def get_j_summaries(cabinet_id):
+    filtered_publicsession = publicsession[publicsession['system_id'] == cabinet_id]
+    chargers = filtered_publicsession['charger_id'].unique()
+    j_summaries = {}
+    
+    for charger in chargers:
+        tmp_filtered_publicsession = filtered_publicsession[filtered_publicsession['charger_id'] == charger]        
+        j_summaries[int(charger)] = {
+            "sessions": int(tmp_filtered_publicsession.shape[0]),
+            "totalsessiontime": int(tmp_filtered_publicsession['totsessdur'].sum())
+        }
+
+    return dict(sorted(j_summaries.items()))
+
+
+def get_j_data(cabinet_id, charger_id):
+    filtered_powercore = powercore[(powercore['system_id'] == cabinet_id) & (powercore['name'] == charger_id)]
+    filtered_powercore = filtered_powercore[["timestamp", "pc_child_present_temperature", "pc_parent_present_temperature"]]
+
+    filtered_publicsession = publicsession[(publicsession['system_id'] == cabinet_id) & (publicsession['charger_id'] == charger_id)]
+    filtered_publicsession = filtered_publicsession[["id", "start_time", "totsessdur", "maxpowerdeli", "avepowerdeli", "startsoc", "endsoc"]]
+
+    data = {
+        "chartdata" : filtered_powercore,
+        "tabledata" : filtered_publicsession,
+    }
+
+    return data
