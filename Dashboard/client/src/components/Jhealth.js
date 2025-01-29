@@ -106,7 +106,7 @@ function Jhealth({ cabinets }) {
         <>
             <Container sx={{ mt: 4 }}>
                 <Typography variant="h4" align="center" gutterBottom>
-                    J Health Statistics
+                    J Health Statistics <span style={{ color: "grey"}}> (Last 30 Days) </span>
                 </Typography>
                 {summaryData ? (
                     <Grid container spacing={4}>

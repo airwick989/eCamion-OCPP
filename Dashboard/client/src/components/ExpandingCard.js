@@ -29,6 +29,7 @@ const ExpandingCard = ({ cabid, jid, sessions, totalsessiontime, upuntil }) => {
       .get(`/jdata?cabinetid=${cabid}&chargerid=${jid}`)
       .then((response) => {
         setJdata(response.data);
+        console.log(response.data);
         setLoading(false);
       })
       .catch((err) => {
@@ -41,47 +42,70 @@ const ExpandingCard = ({ cabid, jid, sessions, totalsessiontime, upuntil }) => {
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
-  const sortDataByStartTime = (tabledata) => {
-    const headers = Object.keys(tabledata);
-
-    const combinedData = Array.from({ length: tabledata[headers[0]].length }, (_, index) => {
-      const row = {};
-      headers.forEach((header) => {
-        row[header] = tabledata[header][index];
-      });
-      return row;
-    });
-
-    combinedData.sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
-
-    const sortedData = headers.reduce((acc, header) => {
-      acc[header] = combinedData.map((row) => row[header]);
-      return acc;
-    }, {});
-
-    return sortedData;
-  };
-
-  const sortedTableData = jdata?.tabledata ? sortDataByStartTime(jdata.tabledata) : {};
-  const headers = Object.keys(sortedTableData);
+  const headers = Object.keys(jdata?.tabledata || {});
   const tabledata =
     headers.length > 0
-      ? Array.from({ length: sortedTableData[headers[0]]?.length || 0 }, (_, index) => {
+      ? Array.from({ length: jdata.tabledata[headers[0]]?.length || 0 }, (_, index) => {
           const row = {};
-          Object.keys(sortedTableData).forEach((header) => {
-            row[header] = sortedTableData[header][index];
+          headers.forEach((header) => {
+            row[header] = jdata.tabledata[header][index];
           });
           return row;
         })
       : [];
-  const columnOrder = ["id", "start_time", "totsessdur", "startsoc", "endsoc", "avepowerdeli", "maxpowerdeli"];
+  const columnOrder = ['ID', 'Start Time', 'Total Session Duration (seconds)', 'Start SOC (%)', 'End SOC (%)', 'Average Power Delivered (kW)', 'Maximum Power Delivered (kW)'];
+
+  let totsessdurlist = [];
+  let avgpwrlist = [];
+  let maxpwrlist = [];
+  for (let i = 0; i < tabledata.length; i++) {
+    totsessdurlist.push(tabledata[i]['Total Session Duration (seconds)']);
+    avgpwrlist.push(tabledata[i]['Average Power Delivered (kW)']);
+    maxpwrlist.push(tabledata[i]['Maximum Power Delivered (kW)']);
+  }
+  
+  const calculateThresholds = (data) => {
+    const mean = data.reduce((sum, value) => sum + value, 0) / data.length;
+    const stdDev = Math.sqrt(
+      data.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / data.length
+    );
+
+    const devFactor = 2
+    const thresholdLow = mean - devFactor * stdDev; 
+    const thresholdHigh = mean + devFactor * stdDev;
+
+    return [Math.round(thresholdLow), Math.round(mean), Math.round(thresholdHigh)];
+};
+
+
+  const [lowtotsessdur, meantotsessdur, hightotsessdur] = calculateThresholds(totsessdurlist);
+  const [lowavgpwr, meanavgpwr, highavgpwr] = calculateThresholds(avgpwrlist);
+  const [lowmaxpwr, meanmaxpwr, highmaxpwr] = calculateThresholds(maxpwrlist);
+
+  const thresholds = {
+    'Total Session Duration (seconds)': {
+      'low': lowtotsessdur,
+      'high': hightotsessdur,
+    },
+    'Average Power Delivered (kW)': {
+      'low': lowavgpwr,
+      'high': highavgpwr,
+    }, 
+    'Maximum Power Delivered (kW)': {
+      'low': lowmaxpwr,
+      'high': highmaxpwr,
+    },
+  }
+
+
+
 
   return (
     <div>
       {/* Summary Card */}
       <Card
         sx={{
-          maxWidth: 400,
+          maxWidth: 1100,
           margin: "16px auto",
           cursor: "pointer",
           boxShadow: 3,
@@ -128,7 +152,7 @@ const ExpandingCard = ({ cabid, jid, sessions, totalsessiontime, upuntil }) => {
               mb: 2,
             }}
           >
-            <Typography variant="h5">Charger {jid} Statistics</Typography>
+            <Typography variant="h5">Charger {jid} Statistics <span style={{ color: "grey"}}> (Last 30 Days) </span></Typography>
             <IconButton onClick={handleClose}>
               <CloseIcon />
             </IconButton>
@@ -154,7 +178,7 @@ const ExpandingCard = ({ cabid, jid, sessions, totalsessiontime, upuntil }) => {
               }}
             >
               <Typography variant="body1">
-                <strong>{sessions}</strong> sessions
+                A total of <strong>{sessions} sessions</strong>
               </Typography>
             </Box>
             <Box
@@ -166,14 +190,51 @@ const ExpandingCard = ({ cabid, jid, sessions, totalsessiontime, upuntil }) => {
               }}
             >
               <Typography variant="body1">
-                Cumulative session time of <strong>{totalsessiontime}</strong>
+                Cumulative session time of <strong>{totalsessiontime} seconds</strong>
               </Typography>
             </Box>
             <span style={{ color: "grey", fontSize: "14px", marginLeft: "20px" }}>
               Data up until <strong>{upuntil}</strong>.
             </span>
           </Box>
-          {loading && <CircularProgress />}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "left",
+              alignItems: "center",
+              gap: 2,
+              mt: 2,
+            }}
+          >
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: "grey.100",
+                borderRadius: 1,
+                display: "inline-block",
+              }}
+            >
+              <Typography variant="body1">
+                The mean total session duration was <strong>{meantotsessdur} seconds</strong>
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: "grey.100",
+                borderRadius: 1,
+                display: "inline-block",
+              }}
+            >
+              <Typography variant="body1">
+                The average power delivery of all sessions had a mean of <strong>{meanavgpwr} kW</strong>, while the max power delivery of all sessions had a mean of <strong>{meanmaxpwr} kW</strong>
+              </Typography>
+            </Box>
+            <span style={{ color: "grey", fontSize: "14px", marginLeft: "20px" }}>
+              The minimum and maximum thresholds for session values to be flagged are <strong>2 standard deviations</strong> above or below the mean. Values below the minimum threshold will be flagged in <strong>blue</strong>, and values above the maximum threshold will be flagged in <strong>red</strong>.
+            </span>
+          </Box>
+          {loading && <CircularProgress sx={{ display: "block", margin: "auto", marginTop: '50px', width: 100, height: 100 }} />}
           {error && <Typography color="error">{error}</Typography>}
           {!loading && jdata && (
             <>
@@ -190,7 +251,7 @@ const ExpandingCard = ({ cabid, jid, sessions, totalsessiontime, upuntil }) => {
                 />
               )}
               {headers.length > 0 && tabledata.length > 0 && (
-                <DataTable headers={headers} data={tabledata} columnOrder={columnOrder} />
+                <DataTable headers={headers} data={tabledata} columnOrder={columnOrder} thresholds={thresholds} />
               )}
             </>
           )}

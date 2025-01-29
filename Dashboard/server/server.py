@@ -187,7 +187,6 @@ def get_jdata():
         data = j_health.get_j_data(cabid, jid)
         merged_data = interpolate_weather_data( data["chartdata"], hourly_weather)
         chartdata = {col: merged_data[col].tolist() for col in merged_data.columns}
-        
         tabledata = {col: data["tabledata"][col].tolist() for col in data["tabledata"].columns}
 
         j_data = {
