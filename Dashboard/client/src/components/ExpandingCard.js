@@ -105,7 +105,7 @@ const ExpandingCard = ({ cabid, jid, sessions, totalsessiontime, upuntil }) => {
       {/* Summary Card */}
       <Card
         sx={{
-          maxWidth: 1100,
+          maxWidth: 400,
           margin: "16px auto",
           cursor: "pointer",
           boxShadow: 3,
