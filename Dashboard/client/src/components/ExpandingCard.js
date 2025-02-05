@@ -9,12 +9,14 @@ import {
   IconButton,
   Divider,
   CircularProgress,
+  Grid,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import HistoryChart from "./HistoryChart";
 import DataTable from "./DataTable";
+import BarChartComponent from "./BarChart";
 
-const ExpandingCard = ({ cabid, jid, sessions, totalsessiontime, upuntil }) => {
+const ExpandingCard = ({ cabid, jid, sessions, totalsessiontime, upuntil, summarychart }) => {
   const [open, setOpen] = useState(false);
   const [jdata, setJdata] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,6 @@ const ExpandingCard = ({ cabid, jid, sessions, totalsessiontime, upuntil }) => {
       .get(`/jdata?cabinetid=${cabid}&chargerid=${jid}`)
       .then((response) => {
         setJdata(response.data);
-        console.log(response.data);
         setLoading(false);
       })
       .catch((err) => {
@@ -105,7 +106,7 @@ const ExpandingCard = ({ cabid, jid, sessions, totalsessiontime, upuntil }) => {
       {/* Summary Card */}
       <Card
         sx={{
-          maxWidth: 400,
+          maxWidth: 1100,
           margin: "16px auto",
           cursor: "pointer",
           boxShadow: 3,
@@ -114,15 +115,48 @@ const ExpandingCard = ({ cabid, jid, sessions, totalsessiontime, upuntil }) => {
         onClick={handleOpen}
       >
         <CardContent>
-          <Typography variant="h5" component="div">
-            Charger {jid}
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            <strong>Number of Sessions:</strong> {sessions}
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            <strong>Cumulative Session Time:</strong> {totalsessiontime}
-          </Typography>
+
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "left",
+              alignItems: "center",
+              gap: 2,
+              mt: 2,
+              marginBottom: '50px',
+            }}
+          >
+            <Typography variant="h5" component="div">
+              Charger {jid}
+            </Typography>
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: "grey.100",
+                borderRadius: 1,
+                display: "inline-block",
+              }}
+            >
+              <Typography variant="body1" component="div">
+                <strong>Number of Sessions:</strong> {sessions}
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                p: 2,
+                bgcolor: "grey.100",
+                borderRadius: 1,
+                display: "inline-block",
+              }}
+            >
+              <Typography variant="body1" component="div">
+                <strong>Cumulative Session Time:</strong> {totalsessiontime}
+              </Typography>
+            </Box>
+          </Box>
+  
+          <BarChartComponent chartdata={summarychart} ydata={'totsessions'} ydatalabel={'Number of Sessions'} title={'Number of Charging Sessions Per Day (Last 10 Days)'} />
+          <BarChartComponent chartdata={summarychart} ydata={'totsessionsdur'} ydatalabel={'Total Duration of All Sessions'} title={'Total Duration of All Charging Sessions Per Day (Last 10 Days)'} barcolour="#1976d2" />
         </CardContent>
       </Card>
 

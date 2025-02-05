@@ -63,10 +63,22 @@ def get_j_summaries(cabinet_id):
     j_summaries = {}
     
     for charger in chargers:
-        tmp_filtered_publicsession = filtered_publicsession[filtered_publicsession['charger_id'] == charger]        
+        tmp_filtered_publicsession = filtered_publicsession[filtered_publicsession['charger_id'] == charger] 
+  
+        chartdata = {} 
+        chart_filtered_publicsession = filter_x_prev_days(filtered_publicsession[['start_time', 'totsessdur']], 10, 'start_time', reversed=True)
+        chart_filtered_publicsession['start_time'] = chart_filtered_publicsession['start_time'].dt.date
+        dates = chart_filtered_publicsession['start_time'].unique()
+        for date in dates:
+            chartdata[date.strftime('%Y-%m-%d')] = {
+                'totsessions': int((chart_filtered_publicsession['start_time'] == date).sum()),
+                'totsessionsdur': int(chart_filtered_publicsession.loc[chart_filtered_publicsession['start_time'] == date, 'totsessdur'].sum())
+            }
+
         j_summaries[int(charger)] = {
             "sessions": int(tmp_filtered_publicsession.shape[0]),
-            "totalsessiontime": int(tmp_filtered_publicsession['totsessdur'].sum())
+            "totalsessiontime": int(tmp_filtered_publicsession['totsessdur'].sum()),
+            "chartdata": chartdata
         }
 
     return dict(sorted(j_summaries.items()))

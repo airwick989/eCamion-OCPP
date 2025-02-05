@@ -42,7 +42,6 @@ function Jhealth({ cabinets }) {
       .get(`/jsummaries?cabinetid=${selectedCabinet}`)
       .then((response) => {
         setSummaryData(response.data["jsummaries"]);
-
         setUpUntil(response.data["upuntil"]);
         setLoading(false);
       })
@@ -110,14 +109,15 @@ function Jhealth({ cabinets }) {
                 </Typography>
                 {summaryData ? (
                     <Grid container spacing={4}>
-                        {Object.entries(summaryData).map(([id, { sessions, totalsessiontime }]) => (
-                            <Grid item xs={12} sm={6} md={4} key={id}>
+                        {Object.entries(summaryData).map(([id, { sessions, totalsessiontime, chartdata }]) => (
+                            <Grid item xs={12} key={id}>
                                 <ExpandingCard
                                     cabid={selectedCabinet}
                                     jid={id}
                                     sessions={sessions}
                                     totalsessiontime={totalsessiontime}
                                     upuntil={upUntil}
+                                    summarychart={chartdata}
                                 />
                             </Grid>
                         ))}
