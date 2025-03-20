@@ -66,7 +66,7 @@ def get_j_summaries(cabinet_id):
         tmp_filtered_publicsession = filtered_publicsession[filtered_publicsession['charger_id'] == charger] 
   
         chartdata = {} 
-        chart_filtered_publicsession = filter_x_prev_days(filtered_publicsession[['start_time', 'totsessdur']], 10, 'start_time', reversed=True)
+        chart_filtered_publicsession = filtered_publicsession[['start_time', 'totsessdur']]
         chart_filtered_publicsession['start_time'] = chart_filtered_publicsession['start_time'].dt.date
         dates = chart_filtered_publicsession['start_time'].unique()
         for date in dates:

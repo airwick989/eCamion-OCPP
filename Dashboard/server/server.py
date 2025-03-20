@@ -188,12 +188,87 @@ def get_jdata():
         merged_data = interpolate_weather_data( data["chartdata"], hourly_weather)
         chartdata = {col: merged_data[col].tolist() for col in merged_data.columns}
         tabledata = {col: data["tabledata"][col].tolist() for col in data["tabledata"].columns}
+        
+        
+        with open("jtablethresholds.json", "r") as file:
+            tablethresholds = json.load(file)
+
+        try:
+            thresholds = tablethresholds[str(cabid)][str(jid)]
+        except KeyError:
+            thresholds = None
 
         j_data = {
             "chartdata": chartdata,
-            "tabledata": tabledata
+            "tabledata": tabledata,
+            "tablethresholds": thresholds,
         }
         return jsonify(j_data)
+    except Exception as e:
+         return jsonify({"error": e}), 400
+    
+
+
+
+def precheckThresholds(tablethresholds, cabid, jid, header):
+    if cabid not in tablethresholds:
+            tablethresholds[cabid] = {}
+    if jid not in tablethresholds[cabid]:
+        tablethresholds[cabid][jid] = {
+            'Total Session Duration (seconds)': { 
+                'low': None, 
+                'high': None 
+            },
+            'Average Power Delivered (kW)': { 
+                'low': None, 
+                'high': None 
+            },
+            'Maximum Power Delivered (kW)': { 
+                'low': None, 
+                'high': None 
+            }
+        }
+    
+    return tablethresholds
+
+
+@app.route('/setTableThresholds')
+def set_thresholds():
+    cabid = str(request.args.get("cabinetid"))
+    jid = str(request.args.get("chargerid"))
+    header = request.args.get("header")
+    clear = request.args.get("clear") == "1"
+    print(f"CLEAR: {clear}, TYPE: {type(clear)}")
+
+    try:
+
+        with open("jtablethresholds.json", "r") as file:
+            tablethresholds = json.load(file)
+
+        tablethresholds = precheckThresholds(tablethresholds, cabid, jid, header)
+
+        if not clear:
+            lowerbound = request.args.get("lowerbound")
+            upperbound = request.args.get("upperbound")
+
+            if lowerbound.strip() != "":
+                tablethresholds[cabid][jid][header]["low"] = int(lowerbound)
+            else:
+                tablethresholds[cabid][jid][header]["low"] = None
+            if upperbound.strip() != "":
+                tablethresholds[cabid][jid][header]["high"] = int(upperbound)
+            else:
+                tablethresholds[cabid][jid][header]["high"] = None
+        else:
+            tablethresholds[cabid][jid][header]["low"] = None
+            tablethresholds[cabid][jid][header]["high"] = None
+
+        with open("jtablethresholds.json", "w") as file:
+            json.dump(tablethresholds, file, indent=4)
+
+        return jsonify({
+            'tablethresholds': tablethresholds[cabid][jid]
+        })
     except Exception as e:
          return jsonify({"error": e}), 400
 

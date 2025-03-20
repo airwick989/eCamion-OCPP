@@ -1,0 +1,48 @@
+{
+    "30": {
+        "1": {
+            "Total Session Duration (seconds)": {
+                "low": 40,
+                "high": 100
+            },
+            "Average Power Delivered (kW)": {
+                "low": null,
+                "high": null
+            },
+            "Maximum Power Delivered (kW)": {
+                "low": null,
+                "high": null
+            }
+        },
+        "2": {
+            "Total Session Duration (seconds)": {
+                "low": null,
+                "high": null
+            },
+            "Average Power Delivered (kW)": {
+                "low": null,
+                "high": 20
+            },
+            "Maximum Power Delivered (kW)": {
+                "low": null,
+                "high": null
+            }
+        }
+    },
+    "34": {
+        "1": {
+            "Total Session Duration (seconds)": {
+                "low": null,
+                "high": null
+            },
+            "Average Power Delivered (kW)": {
+                "low": null,
+                "high": null
+            },
+            "Maximum Power Delivered (kW)": {
+                "low": 80,
+                "high": null
+            }
+        }
+    }
+}
