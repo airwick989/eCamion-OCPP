@@ -10,6 +10,7 @@ from ml_pred import ml_pred
 import os
 import json
 from datetime import datetime
+import module_health
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -268,6 +269,38 @@ def set_thresholds():
 
         return jsonify({
             'tablethresholds': tablethresholds[cabid][jid]
+        })
+    except Exception as e:
+         return jsonify({"error": e}), 400
+    
+
+
+
+@app.route('/moduledata')
+def get_moduledata():
+    cabid = int(request.args.get("cabinetid"))
+
+    strings = ["string1", "string2", "string3"]
+    breakflag = False
+    upuntil = None
+
+    try:
+        module_readings = module_health.get_module_stats(cabid)
+
+        #Get a timestamp for upUntil
+        while not breakflag:
+            for string in strings:
+                if string in module_readings:
+                    if 'Timestamp' in module_readings[string]:
+                        upuntil = module_readings[string]['Timestamp'][0]
+                        breakflag = True
+
+        if not breakflag:
+            upuntil = 'UNAVAILABLE'
+                            
+        return jsonify({
+            "moduledata": module_readings,
+            "upuntil": upuntil,
         })
     except Exception as e:
          return jsonify({"error": e}), 400

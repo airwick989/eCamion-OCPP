@@ -6,6 +6,7 @@ import Box from '@mui/material/Box';
 import CabinetHealth from './CabinetHealth';
 import Prediction from './Prediction';
 import Jhealth from './Jhealth';
+import ModuleHealth from './ModuleHealth';
 
 function CustomTabPanel(props) {
   const { children, value, index, ...other } = props;
@@ -63,7 +64,7 @@ export default function BasicTabs({ cabinets }) {
           <Jhealth cabinets={cabinets}/>
         </CustomTabPanel>
         <CustomTabPanel value={value} index={2}>
-          Item Three
+        <ModuleHealth cabinets={cabinets} />
         </CustomTabPanel>
         <CustomTabPanel value={value} index={3}>
           <Prediction cabinets={cabinets} />

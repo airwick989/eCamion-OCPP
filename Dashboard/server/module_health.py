@@ -26,34 +26,32 @@ uniq_cabinet_ids = list(map(str, uniq_cabinet_ids))
 
 
 readings = ['min_cell_voltage', 'max_cell_voltage', 'avg_cell_voltage', 'total_voltage', 'min_temp', 'max_temp', 'avg_temp']
-columns = ['timestamp', 'system_id', 'repeat'] + readings
+columns = ['repeat', 'timestamp', 'system_id'] + readings
 
+renamed_columns = ['Module', 'Timestamp', 'system_id', 'Minimum Cell Voltage', 'Maximum Cell Voltage', 'Average Cell Voltage', 'Total Voltage', 'Minimum Temperature', 'Maximum Temperature', 'Average Temperature']
 
-def get_module_stats():
-    for cabinet in uniq_cabinet_ids:
-        module_readings[cabinet] = {}
-        curr_string = 1
+def get_module_stats(cabinet):
+    curr_string = 1
+    for string in stringdata:
+        string = string.query(f'system_id == {cabinet}')
+        modulelist = sorted(string['repeat'].unique().tolist())
+        
+        module_readings[f"string{curr_string}"] = {column: [] for column in renamed_columns}
+    
+        for module in modulelist:
+            moduledata = string.query(f'repeat == {module}')[columns]
+            moduledata = db_helper.populate_and_filter(moduledata, columns)
 
-        for string in stringdata:
-            string = string.query(f'system_id == {cabinet}')
-            modulelist = sorted(string['repeat'].unique().tolist())
-            
-            module_readings[cabinet][f"string{curr_string}"] = {}
-            
-            for module in modulelist:
-                moduledata = string.query(f'repeat == {module}')[columns]
-                moduledata = db_helper.populate_and_filter(moduledata, columns)
-                
-                module_readings[cabinet][f"string{curr_string}"][module] = {}
-                
-                for reading in readings:
-                    module_readings[cabinet][f"string{curr_string}"][module][reading] = {
-                        'lowest': moduledata[reading].min(),
-                        'highest': moduledata[reading].max(),
-                        'mean': moduledata[reading].mean()
-                    }
+            moduledata.columns = renamed_columns
 
-            curr_string += 1
+            moduledata = moduledata[moduledata['Timestamp'] == moduledata['Timestamp'].max()].iloc[0].to_dict()
+            moduledata['Timestamp'] = moduledata['Timestamp'].strftime("%Y-%m-%d %H:%M:%S")
+
+            for reading in moduledata:
+                module_readings[f"string{curr_string}"][reading].append(moduledata[reading])
+
+        del module_readings[f"string{curr_string}"]["system_id"]
+        curr_string += 1
 
     # with open("test_moduledata.json", "w") as outfile: 
     #     json.dump(module_readings, outfile, indent=4)
@@ -63,6 +61,6 @@ def get_module_stats():
 def get_module_history(cabinet, string, module):
     string = stringdata[string - 1].query(f'system_id == {cabinet}')
     modulehistory = string.query(f'repeat == {module}')[columns]
-    modulehistory = db_helper.populate_and_filter(modulehistory, columns)
+    modulehistory = db_helper.populate_and_filter(modulehistory, columns).drop_duplicates(subset=['timestamp'], keep='last')
     
     return modulehistory
