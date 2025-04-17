@@ -24,6 +24,7 @@ powercore = j_health.powercore
 systems_chargers = list(publicsession[['system_id', 'charger_id']].drop_duplicates().itertuples(index=False, name=None))
 publicsystems = db_helper.query_db("public_systems")[["id", "site_name"]]
 esssensor = weather_stats.esssensor
+essstatus = cabinet_health.essstatus
 ml_pass = ml_pred()
 
 
@@ -112,6 +113,9 @@ def get_cabinet_health():
 
     merged_data = interpolate_weather_data(sensordata, hourly_weather)
     data["chartdata"] = {col: merged_data[col].tolist() for col in merged_data.columns}
+
+    voltagedata = essstatus[essstatus["system_id"] == id]
+    data["voltagedata"] = {col: voltagedata[col].tolist() for col in voltagedata.columns}
 
     data["upuntil"] = cabinet_coords[coords]['latest_timestamp']
 
@@ -284,26 +288,30 @@ def get_moduledata():
     breakflag = False
     upuntil = None
 
-    try:
-        module_readings = module_health.get_module_stats(cabid)
+    # try:
+    module_readings = module_health.get_module_stats(cabid)
 
-        #Get a timestamp for upUntil
-        while not breakflag:
-            for string in strings:
-                if string in module_readings:
+    #Get a timestamp for upUntil
+    while True:
+        for string in strings:
+            if string in module_readings:
+                if module_readings[string] is not None:
                     if 'Timestamp' in module_readings[string]:
                         upuntil = module_readings[string]['Timestamp'][0]
                         breakflag = True
+                        break
+        if breakflag:
+            break
 
-        if not breakflag:
-            upuntil = 'UNAVAILABLE'
-                            
-        return jsonify({
-            "moduledata": module_readings,
-            "upuntil": upuntil,
+    if not breakflag:
+        upuntil = 'UNAVAILABLE'
+                        
+    return jsonify({
+        "moduledata": module_readings,
+        "upuntil": upuntil,
         })
-    except Exception as e:
-         return jsonify({"error": e}), 400
+    # except Exception as e:
+    #      return jsonify({"error": e}), 400
 
 
 

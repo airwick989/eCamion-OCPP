@@ -96,7 +96,7 @@ const DataTable = ({ cabid, jid, headers, data, columnOrder, thresholds, setThre
   };
 
   useEffect(() => {
-    //cccsfsdfsdfsdfsdfsdfdsfsdfsdfdsfdsfdsfdsfdsfsdfdsadasdasd 888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888console.log("Table re-rendered with new thresholds:", thresholds);
+    //console.log("Table re-rendered with new thresholds:", thresholds);
   }, [thresholds]); // Re-renders when `value` changes
 
   return (

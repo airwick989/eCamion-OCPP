@@ -7,7 +7,7 @@ import DataTable from "./DataTable";
 import Box from '@mui/material/Box';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
-import ModuleSpreadBarChart from "./ModuleSpreadBarChart";
+import SegmentedBarChart from "./SegmentedBarChart";
 
 function ModuleHealth({ cabinets }) {
   const [selectedCabinet, setSelectedCabinet] = useState(
@@ -65,32 +65,34 @@ function ModuleHealth({ cabinets }) {
 
   const handleStringChange = (event, newString) => {
     setCurrString(newString);
-    console.log(newString);
+    // console.log(newString);
   };
 
   
   const formatDataForTable = (moduleData) => {
-    return Object.keys(moduleData).map((string) => {
+    return Object.keys(moduleData)
+      .filter((string) => moduleData[string] !== null && moduleData[string] !== undefined)
+      .map((string) => {
         const moduleReadings = moduleData[string];
-
         return moduleReadings["Module"].map((_, index) => {
-        let row = { Module: moduleReadings["Module"][index] };
-
-        Object.keys(moduleReadings).forEach((dataitem) => {
+          let row = { Module: moduleReadings["Module"][index] };
+  
+          Object.keys(moduleReadings).forEach((dataitem) => {
             if (Array.isArray(moduleReadings[dataitem])) {
-            row[dataitem] = moduleReadings[dataitem][index];
+              row[dataitem] = moduleReadings[dataitem][index];
             }
+          });
+  
+          return row;
         });
-
-        return row;
-        });
-    });
+      });
   };
+  
 
   const tabledata = moduleData ? formatDataForTable(moduleData) : [];
   const headers = Object.keys(moduleData?.string1 || {}); // Extract headers from any module
   const columnOrder = ['Module', 'Timestamp', 'Minimum Cell Voltage', 'Maximum Cell Voltage', 'Average Cell Voltage', 'Total Voltage', 'Minimum Temperature', 'Maximum Temperature', 'Average Temperature'];
-  console.log(tabledata);
+  // console.log(tabledata);
 
   return (
     <div>
@@ -132,15 +134,39 @@ function ModuleHealth({ cabinets }) {
         <>
             <Box sx={{ width: '100%', bgcolor: 'background.paper', marginTop: '50px' }}>
                 <Tabs value={currString} onChange={handleStringChange} centered>
-                    <Tab label="String 1" />
-                    <Tab label="String 2" />
-                    <Tab label="String 3" />
+                    <Tab label="String 1" disabled={moduleData?.string1 == null} />
+                    <Tab label="String 2" disabled={moduleData?.string2 == null} />
+                    <Tab label="String 3" disabled={moduleData?.string3 == null} />
                 </Tabs>
             </Box>
             {headers.length > 0 && tabledata.length > 0 && (
                 <>
                     <h2>String {currString + 1}</h2>
-                    <ModuleSpreadBarChart tabledata={tabledata[currString]} />
+                    {/* <ModuleSpreadBarChart tabledata={tabledata[currString]} /> */}
+                    <SegmentedBarChart
+                      data={tabledata[currString]}
+                      valueKeys={[
+                        'Minimum Cell Voltage',
+                        'Average Cell Voltage',
+                        'Maximum Cell Voltage',
+                      ]}
+                    />
+                    <SegmentedBarChart
+                      data={tabledata[currString]}
+                      valueKeys={[
+                        'Total Voltage',
+                      ]}
+                      colors={['#ffc658']}
+                    />
+                    <SegmentedBarChart
+                      data={tabledata[currString]}
+                      valueKeys={[
+                        'Minimum Temperature',
+                        'Average Temperature',
+                        'Maximum Temperature',
+                      ]}
+                      colors={['#1f77b4', '#2ca02c', '#ff7f0e']}
+                    />
                     <DataTable 
                         headers={headers} 
                         data={tabledata[currString]} // Pass string data

@@ -24,6 +24,7 @@ function CabinetHealth({ cabinets }) {
   const [chartHistory, setChartHistory] = useState(null);
   const [upUntil, setUpUntil] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [voltageHistory, setVoltageHistory] = useState(null);
 
 
   useEffect(() => {
@@ -46,7 +47,7 @@ function CabinetHealth({ cabinets }) {
     axios
       .get(`/cabinethealth?cabinetid=${selectedCabinet}`)
       .then((response) => {
-        const { cabinet_health, chartdata, upuntil } = response.data;
+        const { cabinet_health, chartdata, voltagedata, upuntil } = response.data;
         setCabinetTemperature(roundToNearestTenth(cabinet_health.temp.sys.latest));
         setOutdoorTemperature(roundToNearestTenth(cabinet_health.temp.ext.latest));
         setCabinetHumidity(roundToNearestTenth(cabinet_health.humidity.sys.latest));
@@ -61,6 +62,10 @@ function CabinetHealth({ cabinets }) {
           ext_humidity: chartdata.relative_humidity_2m,
           sys_dew_point: chartdata.sys_dew_point,
           ext_dew_point: chartdata.dew_point_2m,
+        });
+        setVoltageHistory({
+          timestamp: voltagedata.timestamp,
+          sys_voltage: voltagedata.sys_voltage,
         });
         setUpUntil(upuntil);
 
@@ -180,6 +185,16 @@ function CabinetHealth({ cabinets }) {
               yDataSeries={[
                 { data: chartHistory.sys_dew_point, name: "Cabinet", color: "#13cf84" },
                 { data: chartHistory.ext_dew_point, name: "Outdoor", color: "#8884d8" },
+              ]}
+            />
+          )}
+          {voltageHistory && (
+            <HistoryChart
+              title={"System Voltage (V) over Time"}
+              unit={"V"}
+              xData={voltageHistory.timestamp}
+              yDataSeries={[
+                { data: voltageHistory.sys_voltage, name: "Voltage", color: "#ffc658" },
               ]}
             />
           )}

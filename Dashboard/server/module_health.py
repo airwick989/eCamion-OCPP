@@ -24,7 +24,6 @@ for i in range(1,4):
     uniq_cabinet_ids = list(set(uniq_cabinet_ids) | set([cabinet_id for cabinet_id in sorted(tmp['system_id'].unique().tolist())]))
 uniq_cabinet_ids = list(map(str, uniq_cabinet_ids))
 
-
 readings = ['min_cell_voltage', 'max_cell_voltage', 'avg_cell_voltage', 'total_voltage', 'min_temp', 'max_temp', 'avg_temp']
 columns = ['repeat', 'timestamp', 'system_id'] + readings
 
@@ -34,6 +33,9 @@ def get_module_stats(cabinet):
     curr_string = 1
     for string in stringdata:
         string = string.query(f'system_id == {cabinet}')
+        # Remove rows where all specified columns are 0 or NaN
+        string = string[~((string[readings] == 0) | (string[readings].isna())).all(axis=1)]
+    
         modulelist = sorted(string['repeat'].unique().tolist())
         
         module_readings[f"string{curr_string}"] = {column: [] for column in renamed_columns}
@@ -51,6 +53,11 @@ def get_module_stats(cabinet):
                 module_readings[f"string{curr_string}"][reading].append(moduledata[reading])
 
         del module_readings[f"string{curr_string}"]["system_id"]
+        
+        #Check if strings have any modules (if they exist)
+        if not module_readings[f"string{curr_string}"]['Module']:
+            module_readings[f"string{curr_string}"] = None
+        
         curr_string += 1
 
     # with open("test_moduledata.json", "w") as outfile: 
@@ -58,9 +65,9 @@ def get_module_stats(cabinet):
     return module_readings
 
 
-def get_module_history(cabinet, string, module):
-    string = stringdata[string - 1].query(f'system_id == {cabinet}')
-    modulehistory = string.query(f'repeat == {module}')[columns]
-    modulehistory = db_helper.populate_and_filter(modulehistory, columns).drop_duplicates(subset=['timestamp'], keep='last')
+# def get_module_history(cabinet, string, module):
+#     string = stringdata[string - 1].query(f'system_id == {cabinet}')
+#     modulehistory = string.query(f'repeat == {module}')[columns]
+#     modulehistory = db_helper.populate_and_filter(modulehistory, columns).drop_duplicates(subset=['timestamp'], keep='last')
     
-    return modulehistory
+#     return modulehistory

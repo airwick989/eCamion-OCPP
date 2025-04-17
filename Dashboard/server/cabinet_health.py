@@ -8,14 +8,19 @@ import weather_stats as ws
 
 #group by system_id
 esssensor = db_helper.query_db("shadow_esssensor").groupby('system_id').apply(lambda x: x).reset_index(drop=True)
+essstatus = db_helper.query_db("shadow_essstatus").groupby('system_id').apply(lambda x: x).reset_index(drop=True)
 #cast column values in case
 esssensor['timestamp'] = pd.to_datetime(esssensor['timestamp'])
+essstatus['timestamp'] = pd.to_datetime(essstatus['timestamp'])
 #order rows chronologically based on timestamp
 esssensor = esssensor.sort_values(by='timestamp')
+essstatus = essstatus.sort_values(by='timestamp')
 
 #populate missing values in and filter the following columns
 esssensor_columns = ['timestamp', 'system_id', 'sys_humidity', 'sys_temp', 'sys_dew_point']
 esssensor = db_helper.populate_and_filter(esssensor, esssensor_columns)
+essstatus = db_helper.populate_and_filter(essstatus, ['timestamp', 'system_id', 'sys_voltage'])
+essstatus = essstatus[essstatus['sys_voltage'] > 1]
 
 #get avgs, mins, maxes
 cabinet_readings = {}
