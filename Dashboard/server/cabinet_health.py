@@ -49,9 +49,9 @@ for reading in readings:
         }
 
 
-#weather_stats = ws.get_weather_stats()
-with open('weather_stats.json', 'r') as file:
-    weather_stats = json.load(file)
+weather_stats = ws.get_weather_stats()
+# with open('weather_stats.json', 'r') as file:
+#     weather_stats = json.load(file)
 
 for cabinets_list in weather_stats:
     cabinets = cabinets_list.split()
