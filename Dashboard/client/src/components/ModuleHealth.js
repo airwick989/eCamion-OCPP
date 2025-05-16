@@ -150,6 +150,7 @@ function ModuleHealth({ cabinets }) {
                         'Average Cell Voltage',
                         'Maximum Cell Voltage',
                       ]}
+                      title={'Cell Voltage'}
                     />
                     <SegmentedBarChart
                       data={tabledata[currString]}
@@ -157,6 +158,7 @@ function ModuleHealth({ cabinets }) {
                         'Total Voltage',
                       ]}
                       colors={['#ffc658']}
+                      title={'Total Voltage'}
                     />
                     <SegmentedBarChart
                       data={tabledata[currString]}
@@ -166,6 +168,7 @@ function ModuleHealth({ cabinets }) {
                         'Maximum Temperature',
                       ]}
                       colors={['#1f77b4', '#2ca02c', '#ff7f0e']}
+                      title={'Temperature'}
                     />
                     <DataTable 
                         headers={headers} 
