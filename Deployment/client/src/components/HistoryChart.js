@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   LineChart,
   Line,
@@ -12,12 +12,16 @@ import {
 import Button from "@mui/material/Button";
 import Menu from "@mui/material/Menu";
 import MenuItem from "@mui/material/MenuItem";
-import Fade from "@mui/material/Fade";
-import List from '@mui/material/List';
-import ListItemButton from '@mui/material/ListItemButton';
-import ListItemText from '@mui/material/ListItemText';
+import List from "@mui/material/List";
+import ListItemButton from "@mui/material/ListItemButton";
+import ListItemText from "@mui/material/ListItemText";
 import TextField from "@mui/material/TextField";
-
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Alert from "@mui/material/Alert";
+import { grey } from '@mui/material/colors';
 
 const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
   const [timeRange, setTimeRange] = useState("30d");
@@ -25,25 +29,30 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
   const [customEndDate, setCustomEndDate] = useState(null);
   const [isCustomRange, setIsCustomRange] = useState(false);
 
-  // Helper function to round values to the nearest tenth
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const open = Boolean(anchorEl);
+
+  const [yMin, setYMin] = useState("");
+  const [yMax, setYMax] = useState("");
+  const [openYAxisDialog, setOpenYAxisDialog] = useState(false);
+  const [yAxisError, setYAxisError] = useState("");
+
   const roundToNearestTenth = (value) => Math.round(value * 10) / 10;
 
-  // Function to downsample data
   const downsample = (data, maxPoints) => {
     const sampleRate = Math.max(1, Math.floor(data.length / maxPoints));
     return data.filter((_, index) => index % sampleRate === 0);
   };
 
-  // Function to format timestamps for better readability
   const formatTimestamp = (timestamp) => {
     const date = new Date(timestamp);
     if (timeRange === "24h") {
-      return `${date.getHours()}:00`; // Show hours only for 24-hour range
+      return `${date.getHours()}:00`;
     }
-    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${date.getHours()}:00`; // MM/DD/YYYY format
+    return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${date.getHours()}:00`;
   };
 
-  // Filter and round data based on time range
   const filterDataByRange = (xData, yDataSeries, range) => {
     const latestTimestamp = new Date(
       Math.max(...xData.map((timestamp) => new Date(timestamp).getTime()))
@@ -52,18 +61,16 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
 
     if (range === "custom") {
       if (!customStartDate || !customEndDate) return { filteredXData: [], filteredYDataSeries: [] };
-
       const customStart = new Date(customStartDate).getTime();
       const customEnd = new Date(customEndDate).getTime();
       if (customStart > customEnd) return { filteredXData: [], filteredYDataSeries: [] };
 
       const filteredIndices = xData
         .map((timestamp, index) => ({ timestamp, index }))
-        .filter(
-          ({ timestamp }) =>
-            new Date(timestamp).getTime() >= customStart &&
-            new Date(timestamp).getTime() <= customEnd
-        )
+        .filter(({ timestamp }) => {
+          const time = new Date(timestamp).getTime();
+          return time >= customStart && time <= customEnd;
+        })
         .map(({ index }) => index);
 
       const filteredXData = filteredIndices.map((i) => xData[i]);
@@ -104,45 +111,45 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
     return { filteredXData, filteredYDataSeries };
   };
 
-  const { filteredXData, filteredYDataSeries } = filterDataByRange(xData, yDataSeries, isCustomRange ? "custom" : timeRange);
+  const { filteredXData, filteredYDataSeries } = filterDataByRange(
+    xData,
+    yDataSeries,
+    isCustomRange ? "custom" : timeRange
+  );
 
-  // Calculate statistics dynamically for each series
   const calculateStats = (yDataSeries) => {
     const stats = {};
-  
     stats.Average = yDataSeries.map(({ name, data }) => {
-      const validData = data.filter((val) => val !== null); // Exclude null values
+      const validData = data.filter((val) => val !== null);
       return {
         label: name,
         value: validData.length
           ? `${roundToNearestTenth(validData.reduce((sum, val) => sum + val, 0) / validData.length)} ${unit}`
-          : "N/A", // Handle case where no valid data exists
+          : "N/A",
       };
     });
-  
+
     stats.Minimum = yDataSeries.map(({ name, data }) => {
-      const validData = data.filter((val) => val !== null); // Exclude null values
+      const validData = data.filter((val) => val !== null);
       return {
         label: name,
         value: validData.length ? `${Math.min(...validData)} ${unit}` : "N/A",
       };
     });
-  
+
     stats.Maximum = yDataSeries.map(({ name, data }) => {
-      const validData = data.filter((val) => val !== null); // Exclude null values
+      const validData = data.filter((val) => val !== null);
       return {
         label: name,
         value: validData.length ? `${Math.max(...validData)} ${unit}` : "N/A",
       };
     });
-  
+
     return stats;
   };
-  
 
   const stats = useMemo(() => calculateStats(filteredYDataSeries), [filteredYDataSeries]);
 
-  // Downsample xData and yDataSeries
   const maxPoints = 100;
   const sampledXData = downsample(filteredXData, maxPoints);
   const sampledYDataSeries = filteredYDataSeries.map(({ data, name, color }) => ({
@@ -151,167 +158,178 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
     color,
   }));
 
-  // Combine xData with yDataSeries into a single array of objects for Recharts
   const chartData = sampledXData.map((xValue, index) => {
     const dataPoint = { x: xValue };
     sampledYDataSeries.forEach(({ data, name }) => {
-      dataPoint[name] = data[index]; // Add each series as a property
+      dataPoint[name] = data[index];
     });
     return dataPoint;
   });
 
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [selectedIndex, setSelectedIndex] = useState(0);
-  const open = Boolean(anchorEl);
   const handleClickListItem = (event) => {
     setAnchorEl(event.currentTarget);
   };
+
   const handleMenuItemClick = (event, index, option) => {
     setSelectedIndex(index);
     setTimeRange(option);
     setIsCustomRange(option === "custom");
     setAnchorEl(null);
   };
-  const handleClose = () => {
-    setAnchorEl(null);
+
+  const handleClose = () => setAnchorEl(null);
+  const options = ["30d", "7d", "24h", "custom"];
+
+  const handleOpenYAxisDialog = () => setOpenYAxisDialog(true);
+  const handleCloseYAxisDialog = () => {
+    setYAxisError("");
+    setOpenYAxisDialog(false);
   };
-  const options = [
-    '30d',
-    '7d',
-    '24h',
-    "custom"
-  ];
+
+  const handleApplyYAxisRange = () => {
+    const min = parseFloat(yMin);
+    const max = parseFloat(yMax);
+
+    if (isNaN(min) || isNaN(max)) {
+      setYAxisError("Both values must be valid numbers.");
+      return;
+    }
+
+    if (min >= max) {
+      setYAxisError("Minimum must be less than maximum.");
+      return;
+    }
+
+    setYAxisError("");
+    setOpenYAxisDialog(false);
+  };
+
+  const handleResetYAxisRange = () => {
+    setYMin("");
+    setYMax("");
+    setYAxisError("");
+    setOpenYAxisDialog(false);
+  };
+
+  // Reset Y-axis range on chart data change
+  useEffect(() => {
+    setYMin("");
+    setYMax("");
+  }, [filteredXData.length, filteredYDataSeries.length]);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "row",
-        alignItems: "stretch",
-        marginTop: "20px",
-      }}
-    >
-        <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-                <h2>{title}</h2>
-                <div>
-                    <List
-                        component="nav"
-                        aria-label="Device settings"
-                        sx={{ bgcolor: 'background.paper' }}
-                    >
-                        <ListItemButton
-                            id="lock-button"
-                            aria-haspopup="listbox"
-                            aria-controls="lock-menu"
-                            aria-label="Select Time Range"
-                            aria-expanded={open ? 'true' : undefined}
-                            onClick={handleClickListItem}
-                            style={{
-                                width: "90px",
-                                border: "1px solid #ccc",
-                                borderRadius: "8px",
-                            }}
-                            >
-                            <ListItemText
-                                secondary={options[selectedIndex]}
-                                style={{justifyContent: "center"}}
-                            />
-                        </ListItemButton>
-                    </List>
-                    <Menu
-                        id="lock-menu"
-                        anchorEl={anchorEl}
-                        open={open}
-                        onClose={handleClose}
-                        MenuListProps={{
-                        'aria-labelledby': 'lock-button',
-                        role: 'listbox',
-                        }}
-                    >
-                        {options.map((option, index) => (
-                        <MenuItem
-                            key={option}
-                            selected={index === selectedIndex}
-                            onClick={(event) => handleMenuItemClick(event, index, option)}
-                        >
-                            {option}
-                        </MenuItem>
-                        ))}
-                    </Menu> 
-                </div>
-            </div>
-
-
-            {isCustomRange && (
-              <div style={{marginBottom: '20px'}}>
-                <TextField
-                  type="date"
-                  label="Start Date"
-                  value={customStartDate || ""}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
-                <TextField
-                  type="date"
-                  label="End Date"
-                  value={customEndDate || ""}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </div>
-            )}
-
-
-            <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                        dataKey="x"
-                        tickFormatter={formatTimestamp} // Condense timestamps
-                        interval={Math.ceil(sampledXData.length / 8)} // Show labels at regular intervals, with a max of 8 labels on the X Axis
-                    />
-                    <YAxis />
-                    <Tooltip labelFormatter={formatTimestamp} />
-                    <Legend />
-                    {sampledYDataSeries.map(({ name, color }, idx) => (
-                    <Line
-                        key={name}
-                        type="monotone"
-                        dataKey={name}
-                        stroke={color || `hsl(${(idx * 360) / yDataSeries.length}, 70%, 50%)`}
-                        activeDot={{ r: 8 }}
-                    />
-                    ))}
-                </LineChart>
-            </ResponsiveContainer>
+    <div style={{ display: "flex", flexDirection: "row", alignItems: "stretch", marginTop: "20px" }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+          <h2>{title}</h2>
+          <List component="nav" sx={{ bgcolor: "background.paper" }}>
+            <ListItemButton
+              id="lock-button"
+              aria-haspopup="listbox"
+              aria-controls="lock-menu"
+              onClick={handleClickListItem}
+              style={{ width: "90px", border: "1px solid #ccc", borderRadius: "8px" }}
+            >
+              <ListItemText secondary={options[selectedIndex]} style={{ justifyContent: "center" }} />
+            </ListItemButton>
+          </List>
+          <Button variant="outlined" size="large" sx={{ borderRadius: '8px', color: grey[700], borderColor: grey[400], height: '44px', fontWeight: 400 }} onClick={handleOpenYAxisDialog}>
+            Set Y-Axis
+          </Button>
         </div>
-        <div
-        style={{
-            width: "200px",
-            marginLeft: "16px",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "flex-end",
-        }}
-        >
-            {Object.entries(stats).map(([title, statList], idx) => (
-            <div key={idx} style={{ marginBottom: "16px" }}>
-                <div>
-                  <strong style={{ display: 'inline' }}>{title} </strong>
-                  <p style={{ display: 'inline', margin: 0 , color: 'grey'}}>({timeRange})</p>
-                </div>
-                <ul style={{ listStyleType: "none", padding: 0 }}>
-                {statList.map((stat, index) => (
-                    <li key={index} style={{ marginBottom: "8px" }}>
-                    <span style={{ marginRight: "50px" }}>{stat.label}:</span>
-                    <span>{stat.value}</span>
-                    </li>
-                ))}
-                </ul>
-            </div>
+
+        {isCustomRange && (
+          <div style={{ marginBottom: "20px" }}>
+            <TextField
+              type="date"
+              label="Start Date"
+              value={customStartDate || ""}
+              onChange={(e) => setCustomStartDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              type="date"
+              label="End Date"
+              value={customEndDate || ""}
+              onChange={(e) => setCustomEndDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          </div>
+        )}
+
+        <ResponsiveContainer width="100%" height={400}>
+          <LineChart data={chartData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="x"
+              tickFormatter={formatTimestamp}
+              interval={Math.ceil(sampledXData.length / 8)}
+            />
+            <YAxis domain={[yMin !== "" ? Number(yMin) : "auto", yMax !== "" ? Number(yMax) : "auto"]} />
+            <Tooltip labelFormatter={formatTimestamp} />
+            <Legend />
+            {sampledYDataSeries.map(({ name, color }, idx) => (
+              <Line
+                key={name}
+                type="monotone"
+                dataKey={name}
+                stroke={color || `hsl(${(idx * 360) / yDataSeries.length}, 70%, 50%)`}
+                activeDot={{ r: 8 }}
+              />
             ))}
-        </div>
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div style={{ width: "200px", marginLeft: "16px", display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+        {Object.entries(stats).map(([title, statList], idx) => (
+          <div key={idx} style={{ marginBottom: "16px" }}>
+            <div>
+              <strong style={{ display: "inline" }}>{title} </strong>
+              <p style={{ display: "inline", margin: 0, color: "grey" }}>({timeRange})</p>
+            </div>
+            <ul style={{ listStyleType: "none", padding: 0 }}>
+              {statList.map((stat, index) => (
+                <li key={index} style={{ marginBottom: "8px" }}>
+                  <span style={{ marginRight: "50px" }}>{stat.label}:</span>
+                  <span>{stat.value}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* Y-Axis Modal Dialog */}
+      <Dialog open={openYAxisDialog} onClose={handleCloseYAxisDialog}>
+        <DialogTitle>Set Y-Axis Range</DialogTitle>
+        <DialogContent>
+          <TextField
+            type="number"
+            label="Maximum"
+            value={yMax}
+            onChange={(e) => setYMax(e.target.value)}
+            fullWidth
+            margin="dense"
+          />
+          <TextField
+            type="number"
+            label="Minimum"
+            value={yMin}
+            onChange={(e) => setYMin(e.target.value)}
+            fullWidth
+            margin="dense"
+          />
+          {yAxisError && <Alert severity="error" sx={{ mt: 1 }}>{yAxisError}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleResetYAxisRange}>Reset</Button>
+          <Button onClick={handleCloseYAxisDialog}>Cancel</Button>
+          <Button onClick={handleApplyYAxisRange} variant="contained">
+            Apply
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };

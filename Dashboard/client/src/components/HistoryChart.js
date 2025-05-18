@@ -208,6 +208,7 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
     setYMin("");
     setYMax("");
     setYAxisError("");
+    setOpenYAxisDialog(false);
   };
 
   // Reset Y-axis range on chart data change
