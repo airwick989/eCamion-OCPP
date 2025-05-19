@@ -222,17 +222,52 @@ const HistoryChart = ({ title, unit, xData, yDataSeries }) => {
       <div style={{ flex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
           <h2>{title}</h2>
-          <List component="nav" sx={{ bgcolor: "background.paper" }}>
-            <ListItemButton
-              id="lock-button"
-              aria-haspopup="listbox"
-              aria-controls="lock-menu"
-              onClick={handleClickListItem}
-              style={{ width: "90px", border: "1px solid #ccc", borderRadius: "8px" }}
+          <div>
+            <List
+                component="nav"
+                aria-label="Device settings"
+                sx={{ bgcolor: 'background.paper' }}
             >
-              <ListItemText secondary={options[selectedIndex]} style={{ justifyContent: "center" }} />
-            </ListItemButton>
-          </List>
+                <ListItemButton
+                    id="lock-button"
+                    aria-haspopup="listbox"
+                    aria-controls="lock-menu"
+                    aria-label="Select Time Range"
+                    aria-expanded={open ? 'true' : undefined}
+                    onClick={handleClickListItem}
+                    style={{
+                        width: "90px",
+                        border: "1px solid #ccc",
+                        borderRadius: "8px",
+                    }}
+                    >
+                    <ListItemText
+                        secondary={options[selectedIndex]}
+                        style={{justifyContent: "center"}}
+                    />
+                </ListItemButton>
+            </List>
+            <Menu
+                id="lock-menu"
+                anchorEl={anchorEl}
+                open={open}
+                onClose={handleClose}
+                MenuListProps={{
+                'aria-labelledby': 'lock-button',
+                role: 'listbox',
+                }}
+            >
+                {options.map((option, index) => (
+                <MenuItem
+                    key={option}
+                    selected={index === selectedIndex}
+                    onClick={(event) => handleMenuItemClick(event, index, option)}
+                >
+                    {option}
+                </MenuItem>
+                ))}
+            </Menu> 
+        </div>
           <Button variant="outlined" size="large" sx={{ borderRadius: '8px', color: grey[700], borderColor: grey[400], height: '44px', fontWeight: 400 }} onClick={handleOpenYAxisDialog}>
             Set Y-Axis
           </Button>

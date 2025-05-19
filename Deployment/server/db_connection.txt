@@ -1,5 +1,0 @@
-localhost
-dump-postgres-2024091813567
-postgres
-postgres
-5432

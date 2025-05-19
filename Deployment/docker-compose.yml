@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  flask-backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: flask-backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server:/app
+    env_file:
+      - .env
+    environment:
+      - FLASK_ENV=development
+    restart: unless-stopped
+
+  react-frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: react-frontend
+    ports:
+      - "3000:80"
+    volumes:
+      - ./client:/app
+      - /app/node_modules  # prevent overwriting node_modules with host’s empty dir
+    stdin_open: true       # needed for CRA
+    tty: true              # needed for CRA
+    depends_on:
+      - flask-backend

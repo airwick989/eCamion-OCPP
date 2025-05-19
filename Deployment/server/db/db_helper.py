@@ -1,57 +1,35 @@
+import os
 import psycopg2
 from psycopg2 import sql
 import pandas as pd
 
-host = None
-database = None
-username = None
-password = None
-port = None
-with open('db_connection.txt', 'r') as file:
-    lines = file.readlines()
-    host = lines[0].strip()
-    database = lines[1].strip()
-    username = lines[2].strip()
-    password = lines[3].strip()
-    port = lines[4].strip()
-
-
+# Load database configuration from environment variables
+host = os.getenv("DB_HOST")
+database = os.getenv("DB_NAME")
+username = os.getenv("DB_USER")
+password = os.getenv("DB_PASSWORD")
+port = os.getenv("DB_PORT", "5432")  # Default to 5432 if not set
 
 
 def query_db(db):
-    # Connection details
     connection = None
+    dataframe = None 
 
     try:
-        # Establish a connection to the PostgreSQL database
         connection = psycopg2.connect(
-            host=host, 
-            database=database, 
-            user=username, 
-            password=password,  
-            port=port  
+            host=host,
+            database=database,
+            user=username,
+            password=password,
+            port=port
         )
-        
-        # # Create a cursor object
-        # cursor = connection.cursor()
-        # print(f"Connected to PostgreSQL\n")
-        
-        # # Execute an SQL query
-        # cursor.execute(f"SELECT * FROM {db};")
-        
-        # # Fetch and print the result of the query
-        # result = cursor.fetchone()
-        # print(f"Query result:\n {result} \n")
-
         dataframe = pd.read_sql_query(f"SELECT * FROM {db};", connection)
-        
+
     except Exception as error:
         print(f"Error connecting to PostgreSQL: {error}")
-        
+
     finally:
-        # Close the connection
         if connection:
-            #cursor.close()
             connection.close()
 
     return dataframe

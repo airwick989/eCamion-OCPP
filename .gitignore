@@ -4,3 +4,4 @@ notes.txt
 UOIT_dashboard.pdf
 Dashboard/server/venv
 Dashboard/server/db/db_creds.txt
+Deployment/.env
