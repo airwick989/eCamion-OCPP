@@ -13,7 +13,7 @@ The current system model consists of 4 components:
 
 ## Steps to Run/Build
 ### Development build
-H
+- Navigate to [/Dashboard/server/](./Dashboard/server/).
 
-### Production Build
+f### Production Build
 H
