@@ -13,7 +13,14 @@ The current system model consists of 4 components:
 
 ## Steps to Run/Build
 ### Development build
+#### Backend
 - Navigate to [/Dashboard/server/](./Dashboard/server/).
+- Activate the virtual python enironment (**NOTE:** The virtual environment was used for development on a windows machine, the virtual environment may not work as expected on another OS, so you may need to create your own virtual envioronment)
+- Run [server.py](./Dashboard/server/server.py). The server will run on port 5000.
 
-f### Production Build
+#### Frontend
+- Navigate to [/Dashboard/client/](./Dashboard/client/).
+- Run the frontend using `npm run start`
+
+### Production Build
 H
