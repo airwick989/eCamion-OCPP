@@ -119,3 +119,74 @@ To provide users with a centralized dashboard view that loads and displays data 
 #### **Summary**
 
 The `Home.js` component functions as the main entry point for users to view EV charging cabinet analytics. It pulls data on available sites/cabinets, passes this data to a tabbed panel, and contains the entirety of the application.
+
+
+### `TabPanel.js`
+
+This component (`BasicTabs`) renders a tabbed interface for displaying various EV charging cabinet analytics, including health metrics and predictions.
+
+---
+
+#### **Purpose**
+
+Provides a user-friendly tab-based layout for switching between different analytical views (Cabinet Health, J Health, Module Health, Prediction) related to EV charging cabinets.
+
+---
+
+#### **Key Components and Functionality**
+
+- **`BasicTabs` (Default Export)**
+  - Main component that renders the tab navigation and tab panels.
+  - Maintains the active tab index using `useState`.
+  - Uses Material UI's `Tabs` and `Tab` components for navigation.
+  - Passes the `cabinets` prop to all subcomponents.
+
+- **`CustomTabPanel`**
+  - A helper component to conditionally render tab content.
+  - Keeps all tab components mounted to retain internal state but only displays the currently selected tab.
+  - Accessible with `role="tabpanel"` and proper `aria` attributes.
+
+- **`a11yProps(index)`**
+  - Helper function to add accessibility attributes to each tab for screen readers.
+
+---
+
+#### **Tabs and Content**
+
+1. **Cabinet Health**  
+   - Component: `CabinetHealth`  
+   - Props: `cabinets`  
+   - Purpose: Display metrics and status for entire cabinets.
+
+2. **J Health**  
+   - Component: `Jhealth`  
+   - Props: `cabinets`  
+   - Purpose: Display metrics and status of individual chargers or "J"s.
+
+3. **Module Health**  
+   - Component: `ModuleHealth`  
+   - Props: `cabinets`  
+   - Purpose: Displays analytics related to modules within each cabinet.
+
+4. **Prediction**  
+   - Component: `Prediction`  
+   - Props: `cabinets`  
+   - Purpose: Shows predictive analytics based on historical data and ML models.
+
+---
+
+#### **Dependencies**
+
+- **Material UI**:
+  - `@mui/material/Tabs`, `Tab`, `Box`: Used for UI layout and tab styling.
+- **React**
+- **PropTypes**: Used to enforce prop types for `CustomTabPanel`.
+
+- **Child Components**:
+  - `CabinetHealth`, `Jhealth`, `ModuleHealth`, `Prediction`: Render individual content per tab.
+
+---
+
+#### **Summary**
+
+The `TabPanel.js` file provides the main tabbed interface for the dashboard, enhancing UX by segmenting analytics into four logical views. It acts as a hub for rendering all key cabinet, charger, and module-related analytics.
