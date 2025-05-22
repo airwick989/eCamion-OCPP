@@ -393,3 +393,13 @@ The `Prediction` component displays machine learning-based energy delivery forec
 - `SummarySection`: Displays forecast metrics.
 - `HistoryChart`: Line chart visualizing historical vs predicted energy delivery.
 - `Material UI components`: Select, MenuItem, InputLabel, CircularProgress.
+
+#### UI Behavior
+- Dropdown to select cabinet from list.
+- Shows forecast metrics (RMSE, R², MAE) after data loads.
+- Displays combined chart of historical and predicted energy delivery.
+- Shows last updated timestamp (`upUntil`) and last processed time for ML predictions (`processedTime`).
+- Loading spinner while fetching data.
+- Error message displayed if fetching fails.
+
+---
