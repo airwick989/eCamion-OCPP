@@ -359,13 +359,37 @@ To visualize and inspect health parameters of modules (grouped by strings) in EV
    - Bar charts for voltage and temperature metrics
    - A detailed table with per-module values
 
-#### **Example Data Format (per string)**
+---
 
-```json
-"string1": {
-  "Module": [1, 2, 3],
-  "Minimum Cell Voltage": [3.45, 3.48, 3.44],
-  "Average Cell Voltage": [3.55, 3.52, 3.50],
-  "Maximum Cell Voltage": [3.65, 3.60, 3.58],
-  ...
-}
+### Prediction Component
+
+#### Description
+The `Prediction` component displays machine learning-based energy delivery forecasts for a selected cabinet. It provides a historical and predicted energy delivery chart, forecast metrics (RMSE, R², MAE), and allows users to switch between cabinets using a dropdown.
+
+#### Props
+- `cabinets` (Object): A mapping of cabinet IDs to cabinet metadata (e.g., sitename).
+
+#### State Variables
+- `selectedCabinet` (number): The currently selected cabinet ID, persisted in cookies.
+- `error` (string|null): Stores any error messages encountered during data fetch.
+- `chartHistory` (object|null): Contains timestamps, historical data, predicted data, and forecast metrics (RMSE, R², MAE).
+- `upUntil` (string|null): The timestamp up to which the data is available.
+- `processedTime` (string|null): The timestamp when the predictions were last processed.
+- `loading` (boolean): Indicates whether data is currently being fetched.
+
+#### Effects
+- Cabinet Change Listener: Subscribes to a global `cabinetChange` event to update `selectedCabinet`.
+- Fetch Prediction Data: On cabinet selection, fetches historical and predicted energy data using `axios` and stores it in state.
+
+#### Functions
+- `roundToNearestThousandth(number)`: Rounds a given number to three decimal places.
+- `handleCabinetChange(event)`: Updates the selected cabinet, persists it in cookies, and dispatches a `cabinetChange` event.
+
+#### API Call
+- Endpoint: `/prediction?cabinetid={selectedCabinet}`
+
+#### Components Used
+- `CustomFormControl`: Styled form control wrapper.
+- `SummarySection`: Displays forecast metrics.
+- `HistoryChart`: Line chart visualizing historical vs predicted energy delivery.
+- `Material UI components`: Select, MenuItem, InputLabel, CircularProgress.
