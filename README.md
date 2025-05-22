@@ -361,7 +361,7 @@ To visualize and inspect health parameters of modules (grouped by strings) in EV
 
 ---
 
-### Prediction Component
+### `Prediction.js`
 
 #### Description
 The `Prediction` component displays machine learning-based energy delivery forecasts for a selected cabinet. It provides a historical and predicted energy delivery chart, forecast metrics (RMSE, R², MAE), and allows users to switch between cabinets using a dropdown.
@@ -401,5 +401,36 @@ The `Prediction` component displays machine learning-based energy delivery forec
 - Shows last updated timestamp (`upUntil`) and last processed time for ML predictions (`processedTime`).
 - Loading spinner while fetching data.
 - Error message displayed if fetching fails.
+
+---
+
+### `SummarySection.js`
+
+#### Description
+`SummarySection` is a simple presentational React component that displays a titled section with a list of labeled data values, optionally showing a loading message if no data is available.
+
+#### Props
+- `title` (string): The heading text for the section.
+- `data` (Array): An array of objects, each with:
+  - `label` (string): The label or name of the metric.
+  - `value` (any): The corresponding value for the label.
+- `loadingMessage` (string): Message to display when `data` is empty or undefined.
+- `unit` (string): Optional unit string to display after each value.
+
+#### Usage
+Displays each label-value pair with spacing. If no data, shows `loadingMessage`.
+
+#### Example JSX
+```jsx
+<SummarySection
+  title="3 Days forecast"
+  data={[
+    { label: "RMSE", value: 0.123 },
+    { label: "R2", value: 0.95 },
+    { label: "MAE", value: 0.1 },
+  ]}
+  unit="kWh"
+/>
+```
 
 ---
