@@ -80,13 +80,13 @@ This file acts as the root entry point of the application, applying theming and 
 
 ### `Home.js`
 
-The `Home` component is the main landing page of the eCAMION EV Charging Analytics Dashboard. It fetches EV charging cabinet data from the backend and renders tabbed views for interacting with the data.
+The `Home` component is the main landing page of the eCAMION EV Charging Analytics Dashboard. It acts as the container for the single-page application and renders tabbed views for interacting with the data.
 
 ---
 
 #### **Purpose**
 
-To provide users with a centralized dashboard view that loads and displays data from charging station cabinets, with the potential for interactive site and station selection (currently commented out).
+To provide users with a centralized dashboard view that loads and displays data from charging stations, cabinets, modules, etc.
 
 ---
 
@@ -94,7 +94,6 @@ To provide users with a centralized dashboard view that loads and displays data 
 
 - **State Variables**
   - `sites`: Stores all available cabinet/site data fetched from the API.
-  - `data`: Reserved for temperature or time-series data related to selected stations (currently unused but suggests future use).
 
 - **`useEffect()` Hook**
   - On initial render, performs a GET request to `/getstations` using a custom Axios instance.
@@ -107,9 +106,6 @@ To provide users with a centralized dashboard view that loads and displays data 
   - Renders a tabbed interface to display cabinet data.
   - Receives `cabinets={sites}` as props.
 
-- **Future UI Elements**
-  - Contains commented-out MUI `Select` components for future site/station filtering functionality, indicating future extensibility.
-
 ---
 
 #### **Dependencies**
@@ -117,10 +113,9 @@ To provide users with a centralized dashboard view that loads and displays data 
 - `React` & Hooks (`useState`, `useEffect`)
 - `axios` from `../services/api`: Handles HTTP requests to the backend.
 - `BasicTabs` from `../components/TabPanel`: Renders the main data visualization in tabbed format.
-- (Commented-out) Material UI components for dropdowns: `CustomFormControl`, `InputLabel`, `Select`, `MenuItem`
 
 ---
 
 #### **Summary**
 
-The `Home.js` component functions as the main entry point for users to view EV charging cabinet analytics. It pulls data on available sites/cabinets, passes this data to a tabbed panel, and sets the stage for future enhancements like interactive site/station selection.
+The `Home.js` component functions as the main entry point for users to view EV charging cabinet analytics. It pulls data on available sites/cabinets, passes this data to a tabbed panel, and contains the entirety of the application.
