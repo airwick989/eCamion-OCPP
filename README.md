@@ -516,3 +516,307 @@ export default App;
 ```
 
 ---
+
+### `ExpandingCard.js`
+
+#### Overview
+`ExpandingCard` is a React component that displays a summary card of charger session statistics with an expandable modal overlay. It provides a concise visual summary and, when expanded, reveals detailed charts and data tables for in-depth analysis. It supports time range filtering including custom date ranges and is designed with Material UI for responsiveness and accessibility.
+
+#### Core Functionality
+
+- **Summary Card Display:** Shows charger ID, number of sessions, cumulative session time (formatted), and a selectable time range menu.
+- **Expandable Modal View:** Clicking the card expands it into a modal containing detailed charts and session statistics.
+- **Time Range Filtering:** Supports `30d`, `7d`, `24h`, and `custom` date ranges with date pickers for precise control.
+- **Bar Chart Visualizations:** Renders two charts summarizing:
+  - Total number of sessions per day
+  - Total duration of sessions per day
+- **Session Statistics Table:** Displays detailed statistics with sortable columns and threshold indicators for power, duration, etc.
+- **Temperature History Chart:** Optional multi-series line chart to display charger temperature over time.
+- **Interactive UI Elements:** Users can explore trends and performance variations via intuitive components built with Material-UI and Recharts.
+
+#### Props
+
+| Prop Name          | Type     | Description                                               |
+|--------------------|----------|-----------------------------------------------------------|
+| `cabid`            | string   | Cabinet ID used to query session data                    |
+| `jid`              | string   | Charger ID used to query session data                    |
+| `sessions`         | number   | Number of recorded sessions (summary info)               |
+| `totalsessiontime` | number   | Cumulative session time in seconds                       |
+| `upuntil`          | string   | Datetime indicating the latest data point included       |
+| `summarychart`     | object   | Contains bar chart data for sessions and durations       |
+
+#### Dependencies
+
+- **External Libraries:**
+  - `React`
+  - `Material-UI` (components like `Card`, `Button`, `Dialog`, `Menu`, `MenuItem`, `TextField`, `Typography`, `IconButton`, `Alert`, etc.)
+  - `Recharts` (for `BarChart`, `Bar`, `XAxis`, `YAxis`, `Tooltip`, `ResponsiveContainer`)
+  - `date-fns` or similar (for date parsing, formatting, range comparison)
+
+- **Internal Components:**
+  - `HistoryChart.js`: Used for rendering temperature and session history as a multi-series time chart
+  - `SessionTable.js`: Table component that displays individual session statistics with threshold coloring
+  - `YAxisControlDialog.js`: Optional component for user-defined Y-axis range limits (if used)
+
+- **Utilities and Helpers:**
+  - Custom date formatting and filtering logic
+  - API call to `/jdata?cabinetid={cabid}&chargerid={jid}` for fetching session history
+
+#### Example Usage
+
+```jsx
+import React from 'react';
+import ExpandingCard from './ExpandingCard';
+
+const App = () => {
+  const cabinetId = "CAB123";
+  const chargerId = "CHG456";
+  const sessionsCount = 120;
+  const totalSessionTimeSeconds = 36000; // 10 hours
+  const upUntilDate = "2025-05-21";
+  const summaryChartData = {
+    totsessions: [
+      { date: '2025-04-20', value: 5 },
+      { date: '2025-04-21', value: 7 },
+    ],
+    totsessionsdur: [
+      { date: '2025-04-20', value: 1000 },
+      { date: '2025-04-21', value: 1400 },
+    ]
+  };
+
+  return (
+    <ExpandingCard
+      cabid={cabinetId}
+      jid={chargerId}
+      sessions={sessionsCount}
+      totalsessiontime={totalSessionTimeSeconds}
+      upuntil={upUntilDate}
+      summarychart={summaryChartData}
+    />
+  );
+};
+
+export default App;
+```
+
+---
+
+### `BarChart.js`
+
+#### Overview
+`BarChartComponent` is a reusable React component for rendering simple, time-based bar charts using Recharts. It supports filtering of chart data by predefined time ranges (`30d`, `7d`, `24h`) or a custom date range. The component is used to display summarized session statistics, such as session counts or durations, in a visually accessible way.
+
+#### Core Functionality
+
+- **Time Range Filtering:** Filters input data to only include dates within the selected time window (`30d`, `7d`, `24h`, or a custom range defined by two dates).
+- **Data Transformation:** Converts the filtered chart data object into an array of `{ date, ydata }` suitable for Recharts rendering.
+- **Responsive Chart Rendering:** Utilizes `ResponsiveContainer` from Recharts to adapt to varying screen sizes.
+- **Dynamic Titles and Labels:** Accepts customizable chart titles and Y-axis labels for contextual clarity.
+- **Optional Bar Color:** Supports theming via a configurable bar color prop.
+
+#### Props
+
+| Prop Name        | Type     | Description                                                                 |
+|------------------|----------|-----------------------------------------------------------------------------|
+| `chartdata`      | object   | Dictionary of date strings to data values (expected format: `{ date: { key: value } }`) |
+| `ydata`          | string   | Key used to extract the Y-value for each bar                                |
+| `ydatalabel`     | string   | Label for the Y-axis data shown in the tooltip                              |
+| `title`          | string   | Optional title shown above the chart                                        |
+| `isCustomRange`  | boolean  | Indicates whether to use a custom date range                                |
+| `timeRange`      | string   | Selected time range (`"30d"`, `"7d"`, `"24h"`)                              |
+| `customStartDate`| string   | Start date of the custom date range (ISO string)                            |
+| `customEndDate`  | string   | End date of the custom date range (ISO string)                              |
+| `barcolour`      | string   | Optional bar color (default is `#82ca9d`)                                   |
+
+#### Dependencies
+
+- **External Libraries:**
+  - `React`
+  - `Recharts` (`BarChart`, `Bar`, `XAxis`, `YAxis`, `Tooltip`, `ResponsiveContainer`)
+
+- **Used In:**
+  - `ExpandingCard.js` (for rendering summary statistics such as sessions per day and duration per day)
+
+#### Example Usage
+
+```jsx
+import React from 'react';
+import BarChartComponent from './BarChartComponent';
+
+const mockChartData = {
+  "2025-05-01": { sessions: 5 },
+  "2025-05-02": { sessions: 8 },
+  "2025-05-03": { sessions: 3 },
+};
+
+function App() {
+  return (
+    <BarChartComponent
+      chartdata={mockChartData}
+      ydata="sessions"
+      ydatalabel="Charging Sessions"
+      title="Sessions Per Day"
+      isCustomRange={false}
+      timeRange="7d"
+    />
+  );
+}
+
+export default App;
+```
+
+---
+
+### `DataTable.js`
+
+#### Overview
+`DataTable` is a highly interactive React component that renders a Material UI-based table with dynamic thresholding capabilities. It allows users to visually inspect tabular data and highlight anomalies by setting upper and lower thresholds per column. Threshold values can be modified or cleared via modals triggered from column headers.
+
+#### Core Functionality
+
+- **Threshold Highlighting:** Table cells change color based on whether the values are outside configured thresholds (`low` = blue, `high` = red).
+- **Interactive Column Menu:** Clicking on threshold-enabled headers reveals a dropdown menu with options to set or clear thresholds.
+- **Modal Dialogs:** 
+  - One modal allows users to input new upper/lower bounds.
+  - Another confirms threshold removal.
+- **API Integration:** Applies changes by invoking a backend endpoint (`/setTableThresholds`) to persist threshold configurations.
+- **Column Reordering:** Columns can be reordered via the `columnOrder` prop.
+
+#### Props
+
+| Prop Name        | Type                      | Description                                                                 |
+|------------------|---------------------------|-----------------------------------------------------------------------------|
+| `cabid`          | string                    | Cabinet identifier (used in threshold API calls)                           |
+| `jid`            | string                    | Charger/job identifier (used in threshold API calls)                       |
+| `headers`        | array of strings          | Names of all table columns                                                 |
+| `data`           | array of objects          | Table data; each object represents a row                                   |
+| `columnOrder`    | array of strings (optional)| If provided, reorders the headers accordingly                              |
+| `thresholds`     | object                    | Dictionary mapping headers to their `{ low, high }` values                 |
+| `setThresholds`  | function                  | Callback to update threshold state after API call                          |
+
+#### Behavior
+
+- **Threshold Coloring Rules:**
+  - If a value is below `low`, the cell is **blue with white text**.
+  - If a value is above `high`, the cell is **red with white text**.
+  - Otherwise, default styling is applied.
+
+- **Threshold Menu Activation:**
+  - Headers with entries in `thresholds` are clickable and display a dropdown (`<ArrowDropDownIcon>`).
+  - Others remain static.
+
+- **Modal States:**
+  - `openThresholds`: Show modal for setting upper/lower bounds.
+  - `openClear`: Show modal for confirming threshold deletion.
+
+- **Ref Usage:**
+  - `lowerBoundRef` and `upperBoundRef` are used to collect modal input values for API submission.
+
+#### Dependencies
+
+- **External Libraries:**
+  - `React`
+  - `PropTypes`
+  - `@mui/material` (Table, Modal, Typography, IconButton, etc.)
+  - `@mui/icons-material` (`CloseIcon`, `ArrowDropDownIcon`)
+  - `axios` (via a custom import from `../services/api`)
+
+- **Used In:**
+  - Typically embedded within a dashboard or metric view component where data flagging and anomaly review are important.
+
+#### Example Usage
+
+```jsx
+import DataTable from './DataTable';
+
+const sampleHeaders = ["Voltage", "Current", "Temperature"];
+const sampleData = [
+  { Voltage: 220, Current: 10, Temperature: 35 },
+  { Voltage: 210, Current: 15, Temperature: 45 },
+];
+const sampleThresholds = {
+  Voltage: { low: 215, high: 225 },
+  Temperature: { low: 30, high: 40 },
+};
+
+function ParentComponent() {
+  const [thresholds, setThresholds] = useState(sampleThresholds);
+
+  return (
+    <DataTable
+      cabid="cab001"
+      jid="chargerX"
+      headers={sampleHeaders}
+      data={sampleData}
+      columnOrder={["Temperature", "Current", "Voltage"]}
+      thresholds={thresholds}
+      setThresholds={setThresholds}
+    />
+  );
+}
+```
+
+---
+
+### `SegmentedBarChart.js`
+
+#### Overview  
+`SegmentedBarChart` is a reusable React component that renders a customizable stacked bar chart using Recharts. It visualizes multiple metric keys (`valueKeys`) for each categorical label and includes an interactive modal dialog for setting a custom Y-axis range. Designed with Material UI for layout consistency and user interaction, it provides clear visual comparisons across modules or categories.
+
+#### Core Functionality
+
+- **Stacked Bar Chart Visualization:** Renders bars for multiple metric keys (`valueKeys`) per category (default: `Module`) using `BarChart` and `Bar` from Recharts.
+- **YAxis Range Controls:** Users can manually define or reset Y-axis bounds using a modal dialog with validation and error messaging.
+- **Dynamic Color Assignment:** Accepts custom color arrays; defaults are used if omitted.
+- **Data Cleaning & Parsing:** Each metric value is coerced to a float (or zero fallback); labels are stringified or set to `"N/A"` for safety.
+- **Legend & Tooltip Support:** Full interactivity for inspecting bar values and identifying key associations.
+- **Sorting by Aggregate Value:** Bars are ordered such that metrics with the smallest total value appear first, improving comparative visibility.
+
+#### Props
+
+| Prop Name    | Type             | Description                                                                 |
+|--------------|------------------|-----------------------------------------------------------------------------|
+| `data`       | array of objects | Required. Dataset to visualize, one object per category.                   |
+| `valueKeys`  | array of strings | Required. Keys representing metrics to render as stacked bars.             |
+| `colors`     | array of strings | Optional. Color overrides for each `valueKey`. Defaults provided internally. |
+| `label`      | string           | Optional. Field used for X-axis categories. Default is `"Module"`.          |
+| `title`      | string           | Optional. Title displayed above the chart.                                 |
+
+#### Dependencies
+
+- **External Libraries:**
+  - `React`
+  - `Material-UI` (for `Dialog`, `TextField`, `Button`, layout and interaction controls)
+  - `Recharts` (for charting via `BarChart`, `Bar`, `XAxis`, `YAxis`, `Tooltip`, `Legend`, `ResponsiveContainer`, `Rectangle`)
+
+- **Component Utilities:**
+  - `getCustomBarShape(offset)`: Returns a custom `Rectangle` bar renderer with an optional X-offset.
+  - Default color array: Internal fallback colors are used when no `colors` prop is supplied.
+
+#### Example Usage
+
+```jsx
+import React from 'react';
+import SegmentedBarChart from './SegmentedBarChart';
+
+const data = [
+  { Module: 'Auth', errors: 5, warnings: 3 },
+  { Module: 'Payment', errors: 8, warnings: 2 },
+  { Module: 'Search', errors: 1, warnings: 6 },
+];
+
+const metricKeys = ['errors', 'warnings'];
+const colorPalette = ['#FF5733', '#33B5FF'];
+
+const App = () => (
+  <SegmentedBarChart
+    data={data}
+    valueKeys={metricKeys}
+    colors={colorPalette}
+    title="Issue Metrics by Module"
+  />
+);
+
+export default App;
+```
