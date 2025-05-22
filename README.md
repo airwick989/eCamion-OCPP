@@ -820,3 +820,479 @@ const App = () => (
 
 export default App;
 ```
+
+
+
+
+## Server-side Documentation
+
+
+### `db_helper.py`
+
+#### Overview  
+`db_helper.py` provides utility functions to interact with a PostgreSQL database and to preprocess queried data. It connects to the database using environment variables for configuration, queries tables into Pandas DataFrames, and includes a function to fill missing data grouped by `system_id` and filter out unwanted rows.
+
+#### Core Functionality
+
+- **Database Querying:** Connects to PostgreSQL with credentials from environment variables and queries an entire table into a Pandas DataFrame.
+- **Data Cleaning and Filtering:** 
+  - Groups data by `system_id` and applies forward-fill and backward-fill on specified columns to handle missing values.
+  - Filters out rows where the `source` column equals `"s3"`, if the column exists.
+- **Safe Resource Handling:** Ensures database connections are closed after query execution and logs connection errors.
+
+#### Functions
+
+| Function Name           | Parameters               | Returns                | Description                                                        |
+|-------------------------|--------------------------|------------------------|--------------------------------------------------------------------|
+| `query_db(db)`          | `db` (str)               | `pandas.DataFrame` or `None` | Queries all rows from table `db` and returns as a DataFrame.       |
+| `populate_and_filter(df, columns)` | `df` (DataFrame), `columns` (list of str) | `DataFrame` | Performs forward/backward fill grouped by `system_id` and filters out rows with `source == "s3"`. |
+
+#### Dependencies
+
+- **External Libraries:**
+  - `os` — to access environment variables
+  - `psycopg2` — PostgreSQL database adapter
+  - `pandas` — Data manipulation library
+
+- **Environment Variables Required:**
+  - `DB_HOST` — database server host
+  - `DB_NAME` — database name
+  - `DB_USER` — database user name
+  - `DB_PASSWORD` — database password
+  - `DB_PORT` — database port (defaults to `"5432"` if unset)
+
+---
+
+### `callapi.py`
+
+#### Overview  
+`callapi.py` defines a function to retrieve historical hourly weather data from the Open-Meteo API with built-in caching and retry logic. It queries temperature, relative humidity, dew point, and precipitation data for a given geographic coordinate and date range, returning the results as a Pandas DataFrame.
+
+#### Core Functionality
+
+- **API Client Setup:**  
+  Uses `openmeteo_requests.Client` wrapped with `requests_cache` for caching responses (1 hour expiry) and `retry_requests` for automatic retries on transient failures (up to 5 retries with exponential backoff).
+- **Weather Data Retrieval:**  
+  Sends a request to Open-Meteo’s historical forecast API with specified latitude, longitude, start date, and end date, requesting specific hourly weather variables.
+- **Data Processing:**  
+  Extracts hourly weather variables from the API response, ensures consistent ordering, and constructs a Pandas DataFrame indexed by timestamp with columns for each weather variable.
+- **Return Value:**  
+  Returns a DataFrame with datetime index and columns: `temperature_2m`, `relative_humidity_2m`, `dew_point_2m`, and `precipitation`.
+
+#### Functions
+
+| Function Name         | Parameters                        | Returns             | Description                                          |
+|-----------------------|---------------------------------|---------------------|------------------------------------------------------|
+| `get_weather_stats(lat, long, start, end)` | `lat` (float), `long` (float), `start` (str, ISO date), `end` (str, ISO date) | `pandas.DataFrame` | Fetches hourly weather data from Open-Meteo API and returns it as a DataFrame. |
+
+#### Dependencies
+
+- **External Libraries:**
+  - `openmeteo_requests` — Open-Meteo API client library
+  - `requests_cache` — HTTP response caching to avoid redundant API calls
+  - `retry_requests` — Automatic retry wrapper for HTTP requests
+  - `pandas` — For data manipulation and DataFrame creation
+
+- **API Endpoint:**
+  - Open-Meteo historical forecast API: `https://historical-forecast-api.open-meteo.com/v1/forecast`
+
+- **Caching & Retry Behavior:**
+  - Cache stored in `.cache` folder with 1-hour expiry.
+  - Up to 5 retries with exponential backoff on failure.
+
+#### Notes
+
+- The order of requested hourly variables must match the order used when extracting them from the response to correctly assign data.
+- Time data is converted from UNIX epoch seconds to UTC datetime with Pandas.
+
+---
+
+### `cabinet_health.py`
+
+#### Overview  
+`cabinet_health.py` processes and aggregates sensor and status data related to cabinet environmental health, combining internal sensor readings with external weather statistics. It queries sensor data from the database, cleans and fills missing values, calculates statistics per cabinet, and integrates weather data for extended environmental context.
+
+#### Core Functionality
+
+- **Data Retrieval:**  
+  Loads ESS sensor and status data from PostgreSQL tables `shadow_esssensor` and `shadow_essstatus` using the `db_helper.query_db` function.
+- **Data Cleaning & Ordering:**  
+  Converts timestamp columns to datetime objects and sorts data chronologically.
+- **Missing Data Handling:**  
+  Applies forward and backward fill on selected columns grouped by `system_id` using `db_helper.populate_and_filter`.
+- **Filtering:**  
+  Filters out status entries with `sys_voltage` less than or equal to 1.
+- **Statistics Calculation:**  
+  For each unique cabinet (`system_id`), computes average, minimum, maximum, and latest values of temperature, humidity, and dew point from internal sensors.
+- **Integration of External Weather Stats:**  
+  Imports weather statistics from `weather_stats.get_weather_stats()` and merges them with the internal sensor statistics by cabinet.
+- **Data Structure:**  
+  Constructs a nested dictionary `cabinet_readings` with keys for each cabinet containing both internal (`sys`) and external (`ext`) readings for temperature, humidity, and dew point.
+
+#### Data Flow Summary
+
+| Step                        | Description                                                        |
+|-----------------------------|--------------------------------------------------------------------|
+| Query Data                  | Fetch sensor (`shadow_esssensor`) and status (`shadow_essstatus`) data grouped by `system_id`.  |
+| Convert & Sort Timestamps   | Ensure proper datetime types and chronological order.             |
+| Fill Missing Values         | Use forward/backward fill for selected columns per system group.  |
+| Filter Invalid Voltages     | Keep only status rows where `sys_voltage` > 1.                    |
+| Calculate Aggregates        | Compute min, max, avg, and latest reading per cabinet and reading type. |
+| Load External Weather Stats | Retrieve weather data and map external readings to each cabinet.  |
+| Combine Internal & External | Populate `cabinet_readings` dictionary with all gathered info.    |
+
+#### Variables and Structures
+
+| Variable Name       | Type             | Description                                             |
+|---------------------|------------------|---------------------------------------------------------|
+| `esssensor`         | `pandas.DataFrame` | ESS sensor data with environmental readings per cabinet.|
+| `essstatus`         | `pandas.DataFrame` | ESS status data with system voltage per cabinet.         |
+| `cabinet_readings`  | `dict`           | Nested dictionary storing internal and external readings aggregated by cabinet ID and reading type.|
+| `readings`          | `list[str]`      | List of sensor reading keys to process (`sys_temp`, `sys_humidity`, `sys_dew_point`).|
+| `uniq_cabinet_ids`  | `list[str]`      | Sorted list of unique cabinet system IDs as strings.    |
+| `weather_stats`     | `dict`           | External weather statistics mapped by cabinet list keys.|
+
+#### Dependencies
+
+- **Internal Modules:**
+  - `db_helper` from `db`: Provides database querying and data cleaning functions.
+  - `weather_stats` (aliased as `ws`): Supplies external weather data via `get_weather_stats()`.
+
+- **External Libraries:**
+  - `pandas` for DataFrame manipulation.
+  - `json` (imported but commented usage) for optional JSON serialization or reading.
+
+#### Notes
+
+- External weather data is expected to be a dictionary keyed by space-separated cabinet lists, with readings nested inside.
+- Error handling around the external data integration is minimal; `KeyError` is caught silently.
+- The script assumes database environment variables are properly configured for `db_helper`.
+
+---
+
+### `j_health.py`
+
+#### Overview  
+`j_health.py` analyzes charging session data and associated powercore temperature readings to provide insights on charger usage and thermal history. It processes and filters session records and temperature data, enriches sessions with temperature availability flags, and provides summarized and detailed data per cabinet and charger.
+
+#### Core Functionality
+
+- **Data Querying and Preparation:**  
+  Retrieves `public_session` and `shadow_powercore` tables via `db_helper.query_db`.  
+  Renames and converts relevant timestamp columns (`end_time`, `timestamp`) to datetime objects.
+
+- **Data Cleaning and Filtering:**  
+  Uses `db_helper.populate_and_filter` to fill missing values and clean columns in both datasets.
+
+- **Session-Temperature Association:**  
+  For each unique `(system_id, charger_id)` pair, determines if corresponding temperature readings exist during each charging session by filtering `powercore` timestamps within session duration.
+
+- **Session Augmentation:**  
+  Adds two new columns to `publicsession`:  
+  - `start_time`: calculated as `end_time` minus session duration (`totsessdur`).  
+  - `has_temp_hist`: boolean flag indicating if temperature history exists for the session.
+
+- **Sorting:**  
+  Sorts `publicsession` by `start_time` descending, and `powercore` by timestamp ascending.
+
+- **Filtering by Date Range:**  
+  `filter_x_prev_days(df, num_of_days, columnname, reversed=False)`: Returns subset of rows where the datetime column is within the last `num_of_days` relative to either the earliest or latest timestamp depending on `reversed`.
+
+- **Summary Data Generation:**  
+  `get_j_summaries(cabinet_id)`: Returns a dictionary summarizing the number of sessions, total session time, and daily session counts and durations per charger within the last 30 days for the specified cabinet.
+
+- **Detailed Data Retrieval:**  
+  `get_j_data(cabinet_id, charger_id)`: Returns filtered powercore temperature data and session data for a specific cabinet and charger, limited to the last 30 days. The session table columns are renamed for clarity.
+
+#### Functions
+
+| Function Name          | Description                                                                                           |
+|-----------------------|-----------------------------------------------------------------------------------------------------|
+| `filter_x_prev_days`   | Filters DataFrame rows to include only entries within the last `num_of_days` relative to a datetime column, optionally reversed. |
+| `get_j_summaries`     | Generates per-charger session summaries and daily session statistics for a cabinet over the past 30 days. |
+| `get_j_data`          | Retrieves detailed powercore temperature and session data for a specified cabinet and charger within 30 days. |
+
+#### Variables and Data Structures
+
+| Variable Name          | Type                | Description                                                 |
+|------------------------|---------------------|-------------------------------------------------------------|
+| `publicsession`        | `pandas.DataFrame`  | Charging session data with timing and power metrics.        |
+| `powercore`            | `pandas.DataFrame`  | Powercore temperature readings indexed by timestamp.        |
+| `systems_chargers`     | `list[tuple]`       | Unique `(system_id, charger_id)` pairs from sessions.       |
+| `has_temp_hist`        | `list[bool]`        | Flags indicating if temperature data exists for each session.|
+| `start_times`          | `list[pd.Timestamp]`| Calculated session start times.                             |
+| `j_health`             | `dict`              | (Defined but unused in current code; possibly reserved for future use.) |
+
+#### Dependencies
+
+- **Internal Modules:**
+  - `db_helper` from `db`: Provides database querying and data cleaning functions.
+
+- **External Libraries:**
+  - `pandas` for data manipulation.
+  - `datetime.timedelta` for time arithmetic.
+
+#### Notes
+
+- Assumes database environment variables are configured for `db_helper`.
+- Uses mixed-format datetime parsing (`format='mixed'`) to handle inconsistent timestamp formats.
+- Data filtering defaults to 30 days but can be adjusted by modifying `numofdays`.
+- Data returned by `get_j_data` includes renamed columns for user-friendly display.
+
+---
+
+### `module_health.py`
+
+#### Overview  
+`module_health.py` gathers and analyzes data from up to three strings of battery modules per cabinet (system). It focuses on voltage and temperature readings from individual modules and returns the most recent health statistics per module for each string.
+
+#### Core Functionality
+
+- **Data Acquisition and Preprocessing:**
+  - Queries `shadow_string1module`, `shadow_string2module`, and `shadow_string3module` tables.
+  - Converts `timestamp` columns to datetime.
+  - Groups data by `system_id` and `repeat` (the module index).
+  - Sorts all rows by timestamp.
+  - Builds a unique set of all cabinet IDs across the three datasets.
+
+- **Module Health Summary Generation:**
+  - `get_module_stats(cabinet_id)`:
+    - For each string (1 to 3), filters data for the provided `cabinet_id`.
+    - Cleans out rows where all readings are 0 or NaN.
+    - For each module (`repeat`) in the string:
+      - Filters to the most recent row by timestamp.
+      - Applies `populate_and_filter` from `db_helper`.
+      - Renames columns for clarity.
+      - Collects final snapshot data in dictionary format.
+    - Returns a structured dictionary with per-string and per-module statistics.
+
+- **Data Fields Tracked:**
+
+  | Metric                     | Description                                 |
+  |---------------------------|---------------------------------------------|
+  | Minimum Cell Voltage      | Minimum cell voltage for the module         |
+  | Maximum Cell Voltage      | Maximum cell voltage for the module         |
+  | Average Cell Voltage      | Mean cell voltage for the module            |
+  | Total Voltage             | Total voltage across the module             |
+  | Minimum Temperature       | Minimum temperature recorded in the module  |
+  | Maximum Temperature       | Maximum temperature recorded in the module  |
+  | Average Temperature       | Average temperature of the module           |
+
+#### Data Structures
+
+- **`stringdata`:**  
+  List of 3 DataFrames (one per string), each containing module data per cabinet and module.
+
+- **`uniq_cabinet_ids`:**  
+  List of all unique cabinet IDs (as strings) seen across all strings.
+
+- **`module_readings`:**  
+  Dictionary where each key is `string1`, `string2`, or `string3`, and the value is a dictionary of metric arrays, indexed by renamed metric headers.
+
+#### Function Reference
+
+| Function Name        | Description                                                                 |
+|----------------------|-----------------------------------------------------------------------------|
+| `get_module_stats`   | Returns per-module health data for each string in a cabinet.                |
+
+#### Columns Used
+
+- **Raw Columns (internal use):**  
+  `repeat`, `timestamp`, `system_id`, `min_cell_voltage`, `max_cell_voltage`, `avg_cell_voltage`, `total_voltage`, `min_temp`, `max_temp`, `avg_temp`
+
+- **Renamed Columns (output):**  
+  `Module`, `Timestamp`, `Minimum Cell Voltage`, `Maximum Cell Voltage`, `Average Cell Voltage`, `Total Voltage`, `Minimum Temperature`, `Maximum Temperature`, `Average Temperature`
+
+#### Dependencies
+
+- **Internal:**
+  - `db_helper` from `db`: for querying and cleaning data.
+  - `weather_stats` as `ws`: Imported but unused in this file (may be reserved for future context enrichment).
+
+- **External:**
+  - `pandas`: For data manipulation.
+  - `json`: Only used for optional file export (commented out).
+
+#### Notes
+
+- Rows with entirely zero or NaN readings are ignored for better data quality.
+- If no modules exist in a string, its data is set to `None` in the final dictionary.
+- `Timestamp` in output is formatted as a string: `"%Y-%m-%d %H:%M:%S"` for readability.
+- Designed to support up to 3 strings per cabinet by default.
+
+---
+
+### `ml_pred.py`
+
+#### Overview  
+This module processes historical charging session data to perform **unsupervised clustering** using DTW (Dynamic Time Warping), followed by **supervised learning** using a `RandomForestRegressor` to make short-term energy delivery predictions for each charging cabinet. The resulting forecast and performance metrics are saved as a JSON file.
+
+#### Core Pipeline Summary
+
+1. **Data Ingestion and Cleaning**
+   - Loads session data from the `public_session` table using `db_helper.query_db`.
+   - Parses `time` column to `datetime`, drops invalid entries.
+   - Scales `totenergydeli` (total energy delivered) using `StandardScaler`.
+
+2. **Time-Series Preparation**
+   - Aggregates scaled energy data by `system_id` in 2-hour resampled time series.
+   - Converts time series into a DTW-compatible format.
+
+3. **Clustering Using DTW + KMedoids**
+   - Computes pairwise DTW distances between scaled time series.
+   - Evaluates clustering for `k=4` to `10` using silhouette scores.
+   - Selects the `k` with the best silhouette score.
+   - Assigns each `system_id` a `cluster_group` label based on best-fit clustering.
+
+4. **Feature Engineering**
+   - Adds:
+     - `time_of_day`: Decimal hour (e.g., 14.5 for 2:30 PM)
+     - `day_of_week`: Day index (0 = Monday)
+   - Generates 12 lag features for `scaled_totenergydeli`.
+
+5. **Supervised Model Training + Forecasting**
+   - For each `system_id`:
+     - Splits into training (80%) and test (20%) sets.
+     - Trains `RandomForestRegressor` to predict next `scaled_totenergydeli`.
+     - Evaluates model with RMSE, R², and MAE.
+     - Generates a 3-day (36-step) forecast using iterative predictions.
+     - Inverse transforms predictions to raw `totenergydeli`.
+
+6. **Output Serialization**
+   - Stores per-cabinet model performance and historical/predicted energy values.
+   - Saves all outputs as a JSON file:
+     - Path: `./predictiondata/ml_pred_<YYYY-MM-DD>.json`
+
+#### Output JSON Structure
+
+```json
+{
+  "data": {
+    "<system_id>": {
+      "cs_id": "<system_id>",
+      "rmse": ...,
+      "r2": ...,
+      "mae": ...,
+      "history": {
+        "time": [...],
+        "totenergydeli": [...]
+      },
+      "predictions": {
+        "time": [...],
+        "totenergydeli": [...]
+      }
+    },
+    ...
+  },
+  "processed_time": "YYYY-MM-DDTHH:MM:SS"
+}
+```
+
+#### Key Concepts Used
+
+| Component                | Description                                                                 |
+|-------------------------|-----------------------------------------------------------------------------|
+| **DTW (Dynamic Time Warping)**      | Measures similarity between time series with phase shifts. Used for clustering. |
+| **KMedoids**            | Clustering technique robust to outliers, uses DTW distance matrix.           |
+| **Silhouette Score**    | Metric for validating cluster quality.                                       |
+| **Lag Features**        | Predictors based on past 12 timesteps.                                       |
+| **RandomForestRegressor** | Ensemble model for forecasting future energy delivery.                     |
+
+#### Notable Functions & Submodules
+
+| Name                        | Purpose                                      |
+|-----------------------------|----------------------------------------------|
+| `create_lagged_features()`  | Generates lag features for regression input. |
+| `convert_to_serializable()` | Ensures NumPy and pandas types are JSON-compatible. |
+| `db_helper.populate_and_filter()` | Filters and cleans the dataset.                |
+
+#### Dependencies
+
+- **Core:** `pandas`, `numpy`, `datetime`, `json`, `os`
+- **ML & Clustering:**
+  - `StandardScaler` – Scales features.
+  - `cdist_dtw` – Computes DTW distance matrix.
+  - `KMedoids` (from `sklearn_extra`) – Clustering algorithm.
+  - `silhouette_score` – Evaluates clustering effectiveness.
+  - `RandomForestRegressor` – Time-series forecasting model.
+- **Visualization (optional):** `matplotlib.pyplot` (imported but unused)
+
+#### Notes
+
+- Timestamp formatting uses ISO 8601 for consistency across platforms.
+- A maximum of 3 days ahead is predicted at 2-hour intervals (36 future points).
+- Old JSON files in `./predictiondata/` are deleted before writing new predictions.
+
+---
+
+### `server.py`
+
+#### Overview  
+This is the **main Flask application** serving as the backend API for the dashboard frontend. It handles system health, weather, predictions, and session summaries for EV charging cabinets. The backend integrates multiple modules and external APIs to deliver processed analytics and visual-ready data to the React frontend.
+
+#### Key Responsibilities
+
+- Serve processed data from databases and ML models to the frontend.
+- Fuse time-aligned weather and sensor data for correlation analysis.
+- Enable threshold configuration for charger-level session summaries.
+- Manage prediction results generated from ML models.
+
+#### Core Routes
+
+| Route | Method | Purpose |
+|-------|--------|---------|
+| `/getstations` | GET | Returns all `system_id` and `charger_id` pairs grouped under site names. |
+| `/cabinethealth` | GET | Returns cabinet-level health readings, voltage, and weather-interpolated sensor data. |
+| `/prediction` | GET | Returns ML-predicted and historical energy delivery data for a cabinet. |
+| `/jsummaries` | GET | Returns statistical summaries for a specific charger in a cabinet. |
+| `/jdata` | GET | Returns raw charger session data and interpolated weather series. |
+| `/setTableThresholds` | GET | Updates or clears thresholds for charger session metrics (via JSON file). |
+| `/moduledata` | GET | Returns module health readings for a cabinet with a recent timestamp. |
+
+#### Major Components Used
+
+| Component | Description |
+|----------|-------------|
+| `Flask` + `CORS` | RESTful API with cross-origin support for frontend integration. |
+| `j_health`, `cabinet_health`, `weather_stats`, `module_health` | Internal modules for pulling and processing charger, cabinet, and module data. |
+| `ml_pred` | Runs clustering and forecasting pipeline, loads results at startup. |
+| `db_helper.query_db()` | Utility to query PostgreSQL tables (e.g., `public_systems`, `public_session`). |
+| `callapi.get_weather_stats()` | External API fetch for historical hourly weather data. |
+| `interpolate_weather_data()` | Aligns weather series with cabinet sensor timestamps using time-based interpolation. |
+
+#### File I/O Details
+
+- **ML Forecasts:**
+  - Loaded from `./predictiondata/ml_pred_<date>.json`
+  - Must exist before the `/prediction` endpoint is accessed.
+
+- **Threshold Settings:**
+  - Stored in `jtablethresholds.json` (local JSON file).
+  - Managed by `/setTableThresholds`.
+
+#### Helper Functions
+
+- `interpolate_weather_data(sensordata, weatherdata)`
+  - Converts timestamps to timezone-naive format.
+  - Resamples weather data to 1-minute intervals and interpolates.
+  - Aligns weather columns (`temperature_2m`, `relative_humidity_2m`, etc.) with sensor timestamps.
+
+- `precheckThresholds(tablethresholds, cabid, jid, header)`
+  - Ensures nested JSON structure exists before updating threshold values.
+
+#### Error Handling Notes
+
+- Most routes wrap logic in `try/except` blocks and return JSON-encoded error messages.
+- In `/moduledata`, exception handling is disabled (commented out) to allow debugging.
+
+#### Initialization Behavior
+
+- Runs once on server startup:
+  - Loads all necessary data sources (session data, cabinet health, module stats, predictions).
+  - Precomputes charger–cabinet mappings (`systems_chargers`).
+  - Caches `ml_pred()` results for fast response on `/prediction`.
+
+#### Deployment
+
+- Server runs on `host='0.0.0.0'`, `port=5000` with `debug=True` by default.
+- Can be placed behind a reverse proxy (e.g., Nginx) or containerized with Docker.
