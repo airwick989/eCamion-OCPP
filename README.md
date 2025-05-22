@@ -281,3 +281,91 @@ The `Jhealth.js` component delivers a cabinet-specific overview of J station act
 
 ---
 
+### `ModuleHealth.js`
+
+The `ModuleHealth` component presents detailed module-level health data for EV battery strings, including voltage and temperature statistics. It supports dynamic cabinet selection, string toggling, and visual + tabular data rendering.
+
+#### **Purpose**
+
+To visualize and inspect health parameters of modules (grouped by strings) in EV charger cabinets. It supports multiple strings per cabinet and provides clear bar chart and table-based insights.
+
+#### **Main Features**
+
+- **Cabinet Selection**
+  - Dropdown for selecting a cabinet (`Select` with MUI).
+  - Persisted in a cookie using `js-cookie`.
+  - Custom event dispatch (`cabinetChange`) to sync with other components.
+
+- **String Selection**
+  - `Tabs` from MUI allow switching between string 1, 2, or 3.
+  - Tabs are disabled if corresponding string data is unavailable.
+
+- **Chart Visualization**
+  - `SegmentedBarChart` is used to render:
+    - Min/Average/Max Cell Voltages
+    - Total Voltage
+    - Min/Average/Max Temperatures
+
+- **Tabular Data Display**
+  - `DataTable` presents a breakdown of module metrics.
+  - Supports configurable column order and is ready for future thresholding.
+
+#### **State Variables**
+
+| Variable         | Description                                                                 |
+|------------------|-----------------------------------------------------------------------------|
+| `selectedCabinet`| Currently selected cabinet ID (stored in cookies)                           |
+| `error`          | Tracks data fetching errors                                                 |
+| `upUntil`        | Date string indicating the freshness of the data                            |
+| `loading`        | Indicates if data is being fetched                                          |
+| `moduleData`     | Raw module data for strings 1–3                                             |
+| `currString`     | Index of the currently selected string tab (0-based)                        |
+
+#### **Data Processing**
+
+- **`formatDataForTable(moduleData)`**  
+  Converts raw object-based readings into row-wise data arrays for charting and table rendering.
+
+- **`tabledata`**  
+  Contains an array of arrays. Each index corresponds to a string (e.g., `tabledata[0]` for string1).
+
+- **`headers` and `columnOrder`**  
+  Used to control column rendering order in `DataTable`.
+
+#### **Dependencies**
+
+- **React Hooks**: `useState`, `useEffect`
+- **Axios**: API calls to `/moduledata`
+- **Material UI Components**:
+  - Layout: `Box`, `Tabs`, `Tab`
+  - Form: `Select`, `MenuItem`, `InputLabel`
+  - Feedback: `CircularProgress`
+- **Custom Components**:
+  - `CustomFormControl`: Styled form wrapper
+  - `SegmentedBarChart`: Custom multi-series bar chart
+  - `DataTable`: Custom table renderer
+
+#### **APIs Used**
+
+- `GET /moduledata?cabinetid={id}`  
+  Returns `moduledata` (per-string) and `upuntil` timestamp.
+
+#### **UI Flow Summary**
+
+1. User selects a cabinet.
+2. Data is fetched and grouped by battery strings.
+3. Tabs allow switching between strings (if available).
+4. Each string view shows:
+   - Bar charts for voltage and temperature metrics
+   - A detailed table with per-module values
+
+#### **Example Data Format (per string)**
+
+```json
+"string1": {
+  "Module": [1, 2, 3],
+  "Minimum Cell Voltage": [3.45, 3.48, 3.44],
+  "Average Cell Voltage": [3.55, 3.52, 3.50],
+  "Maximum Cell Voltage": [3.65, 3.60, 3.58],
+  ...
+}
