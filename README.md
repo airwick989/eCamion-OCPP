@@ -434,3 +434,85 @@ Displays each label-value pair with spacing. If no data, shows `loadingMessage`.
 ```
 
 ---
+
+### `HistoryChart.js`
+
+#### Overview
+`HistoryChart` is a React component that renders an interactive line chart for time series data. It supports multiple data series, selectable predefined and custom time ranges, user-defined Y-axis range limits, and displays summary statistics (average, min, max) for the visible data.
+
+#### Core Functionality
+
+- **Time Range Filtering:** Users can select from predefined ranges (`30d`, `7d`, `24h`) or specify a custom date range to filter the displayed data.
+- **Data Downsampling:** Limits the number of data points rendered (max 100) to improve performance and clarity.
+- **Multiple Data Series:** Supports multiple Y data series, each represented by a separate colored line with a legend.
+- **Y-Axis Range Control:** Allows users to set minimum and maximum Y-axis values via a modal dialog, with input validation.
+- **Summary Statistics:** Calculates and shows average, minimum, and maximum values for each displayed data series.
+- **Responsive UI:** Built with `recharts` for charts and Material-UI for UI controls, ensuring accessibility and responsiveness.
+
+#### Key Functions
+
+- `filterDataByRange(xData, yDataSeries, range)`: Filters data according to the selected time range or custom dates.
+- `downsample(data, maxPoints)`: Reduces the number of points by sampling to a max number.
+- `calculateStats(yDataSeries)`: Computes average, min, and max for each data series.
+- `formatTimestamp(timestamp)`: Formats timestamps for display on the X-axis and tooltips.
+- Event handlers for managing time range selection, Y-axis dialog controls, and validation.
+
+#### Dependencies
+
+- React
+- Recharts (`LineChart`, `Line`, `XAxis`, `YAxis`, `Tooltip`, `Legend`, `CartesianGrid`, `ResponsiveContainer`)
+- Material-UI components (`Button`, `Menu`, `MenuItem`, `List`, `ListItemButton`, `ListItemText`, `TextField`, `Dialog`, `DialogTitle`, `DialogContent`, `DialogActions`, `Alert`)
+- JavaScript Date utilities
+
+#### Props
+
+| Prop Name    | Type          | Description                                      |
+|--------------|---------------|------------------------------------------------|
+| `title`      | string        | Title displayed above the chart                 |
+| `unit`       | string        | Unit appended to numeric values and stats      |
+| `xData`      | array         | Array of timestamps (e.g., ISO strings)        |
+| `yDataSeries`| array of objs | Each object contains `{ data: array, name: string, color?: string }` aligned with `xData` |
+
+#### Usage Example
+
+```jsx
+import React from "react";
+import HistoryChart from "./HistoryChart";
+
+const sampleXData = [
+  "2025-05-01T00:00:00Z",
+  "2025-05-02T00:00:00Z",
+  "2025-05-03T00:00:00Z",
+  // ... more timestamps
+];
+
+const sampleYDataSeries = [
+  {
+    name: "Temperature",
+    color: "#FF0000",
+    data: [22.5, 21.7, 23.0 /* ... corresponding values */],
+  },
+  {
+    name: "Humidity",
+    color: "#0000FF",
+    data: [55, 60, 58 /* ... corresponding values */],
+  },
+];
+
+function App() {
+  return (
+    <div>
+      <HistoryChart
+        title="Environmental Sensor Data"
+        unit="°C / %"
+        xData={sampleXData}
+        yDataSeries={sampleYDataSeries}
+      />
+    </div>
+  );
+}
+
+export default App;
+```
+
+---
