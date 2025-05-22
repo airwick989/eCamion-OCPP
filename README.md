@@ -41,13 +41,9 @@ The current system model consists of 4 components:
 
 This is the root component of the eCAMION EV Charging Analytics Dashboard React client. It sets up application-wide theming and routing.
 
----
-
 #### **Purpose**
 
 Defines the primary structure of the frontend application, establishing routing and theming for the entire interface.
-
----
 
 #### **Key Components and Functionality**
 
@@ -61,8 +57,6 @@ Defines the primary structure of the frontend application, establishing routing 
   Defines the routing structure. Currently, it includes:
   - `/` → renders the `Home` component from `./pages/Home`
 
----
-
 #### **Dependencies**
 
 - `react-router-dom`: Provides routing utilities like `BrowserRouter`, `Routes`, and `Route`.
@@ -71,24 +65,19 @@ Defines the primary structure of the frontend application, establishing routing 
 - `./styles/Theme`: Defines the custom MUI theme.
 - `./App.css`: Global CSS for base styling.
 
----
-
 #### **Summary**
 
 This file acts as the root entry point of the application, applying theming and routing. It enables easy scaling by allowing new routes and themes to be added as needed.
 
+---
 
 ### `Home.js`
 
 The `Home` component is the main landing page of the eCAMION EV Charging Analytics Dashboard. It acts as the container for the single-page application and renders tabbed views for interacting with the data.
 
----
-
 #### **Purpose**
 
 To provide users with a centralized dashboard view that loads and displays data from charging stations, cabinets, modules, etc.
-
----
 
 #### **Key Components and Functionality**
 
@@ -106,32 +95,25 @@ To provide users with a centralized dashboard view that loads and displays data 
   - Renders a tabbed interface to display cabinet data.
   - Receives `cabinets={sites}` as props.
 
----
-
 #### **Dependencies**
 
 - `React` & Hooks (`useState`, `useEffect`)
 - `axios` from `../services/api`: Handles HTTP requests to the backend.
 - `BasicTabs` from `../components/TabPanel`: Renders the main data visualization in tabbed format.
 
----
-
 #### **Summary**
 
 The `Home.js` component functions as the main entry point for users to view EV charging cabinet analytics. It pulls data on available sites/cabinets, passes this data to a tabbed panel, and contains the entirety of the application.
 
+---
 
 ### `TabPanel.js`
 
 This component (`BasicTabs`) renders a tabbed interface for displaying various EV charging cabinet analytics, including health metrics and predictions.
 
----
-
 #### **Purpose**
 
 Provides a user-friendly tab-based layout for switching between different analytical views (Cabinet Health, J Health, Module Health, Prediction) related to EV charging cabinets.
-
----
 
 #### **Key Components and Functionality**
 
@@ -148,8 +130,6 @@ Provides a user-friendly tab-based layout for switching between different analyt
 
 - **`a11yProps(index)`**
   - Helper function to add accessibility attributes to each tab for screen readers.
-
----
 
 #### **Tabs and Content**
 
@@ -173,8 +153,6 @@ Provides a user-friendly tab-based layout for switching between different analyt
    - Props: `cabinets`  
    - Purpose: Shows predictive analytics based on historical data and ML models.
 
----
-
 #### **Dependencies**
 
 - **Material UI**:
@@ -185,8 +163,68 @@ Provides a user-friendly tab-based layout for switching between different analyt
 - **Child Components**:
   - `CabinetHealth`, `Jhealth`, `ModuleHealth`, `Prediction`: Render individual content per tab.
 
----
-
 #### **Summary**
 
 The `TabPanel.js` file provides the main tabbed interface for the dashboard, enhancing UX by segmenting analytics into four logical views. It acts as a hub for rendering all key cabinet, charger, and module-related analytics.
+
+---
+
+### `CabinetHealth.js`
+
+The `CabinetHealth` component displays real-time and historical environmental metrics for a selected EV charging cabinet, including temperature, humidity, dew point, and system voltage.
+
+#### **Purpose**
+
+To provide detailed environmental data visualizations for individual cabinets, enabling users to monitor cabinet conditions and track changes over time.
+
+#### **Key Components and Functionality**
+
+- **State Variables**
+  - `cabinetTemperature`, `outdoorTemperature`: Latest temperatures inside and outside the cabinet.
+  - `cabinetHumidity`, `outdoorHumidity`: Latest humidity levels.
+  - `cabinetDewPoint`, `outdoorDewPoint`: Calculated dew points.
+  - `selectedCabinet`: Tracks the user-selected cabinet (persisted in cookies).
+  - `chartHistory`: Time-series data for temperature, humidity, and dew point.
+  - `voltageHistory`: Time-series data for cabinet voltage.
+  - `upUntil`: Timestamp of the most recent data point available.
+  - `error`, `loading`: Flags for UI state management.
+
+- **`useEffect()` Hook**
+  - Listens for `cabinetChange` custom events to sync selected cabinet state across components.
+  - Fetches cabinet health and historical data on `selectedCabinet` change.
+  - Sets loading and error state as needed.
+
+- **Cabinet Selection**
+  - Rendered using `Select` and `MenuItem` components from Material UI.
+  - Cabinet selection updates cookie and dispatches a custom `cabinetChange` event for cross-component synchronization.
+
+- **Chart Rendering**
+  - Four `HistoryChart` components show trends for:
+    - Temperature
+    - Humidity
+    - Dew Point
+    - Voltage
+
+- **SummarySection Components**
+  - Three summary cards display current cabinet and outdoor values for:
+    - Temperature
+    - Humidity
+    - Dew Point
+
+#### **Dependencies**
+
+- `React` & Hooks (`useState`, `useEffect`)
+- `axios` from `../services/api`: For HTTP data retrieval.
+- `js-cookie`: For persisting the selected cabinet.
+- `@mui/material`
+  - `Select`, `MenuItem`, `InputLabel`, `CircularProgress`: Used for UI elements and feedback.
+- **Custom Components**
+  - `SummarySection`: Displays quick metrics.
+  - `HistoryChart`: Line charts for time-series data.
+  - `CustomFormControl`: Styled form control wrapper.
+
+#### **Summary**
+
+`CabinetHealth.js` enables users to view real-time environmental metrics and historical trends for a selected cabinet. It handles cabinet selection, displays summary metrics, and generates multiple line charts to visualize changes in environmental and voltage conditions over time.
+
+---
