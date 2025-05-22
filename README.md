@@ -228,3 +228,56 @@ To provide detailed environmental data visualizations for individual cabinets, e
 `CabinetHealth.js` enables users to view real-time environmental metrics and historical trends for a selected cabinet. It handles cabinet selection, displays summary metrics, and generates multiple line charts to visualize changes in environmental and voltage conditions over time.
 
 ---
+
+### `Jhealth.js`
+
+The `Jhealth` component displays health summaries of individual EV charging stations or "J"s over the past 30 days. It dynamically fetches and presents usage data based on the selected cabinet and provides an expandable card interface for reviewing each "J"’s statistics.
+
+#### **Purpose**
+
+To provide a visual and interactive summary of charger-level health metrics such as session count, total session time, and time-series charts for each "J" in a cabinet.
+
+#### **Key Components and Functionality**
+
+- **State Variables**
+  - `selectedCabinet`: Tracks the currently selected cabinet ID.
+  - `error`: Stores any error encountered during data fetching.
+  - `summaryData`: Contains charger summary data including session stats and charts.
+  - `upUntil`: Timestamp up to which the data is valid.
+  - `loading`: Indicates whether data is being fetched.
+
+- **`useEffect()` for Cabinet Change Events**
+  - Subscribes to the global `cabinetChange` event to update `selectedCabinet` across the app.
+
+- **`useEffect()` for Data Fetching**
+  - On change to `selectedCabinet`, sends a GET request to `/jsummaries` to fetch J station summary data.
+  - Updates summary and timestamp states.
+
+- **Cabinet Selector**
+  - Dropdown menu for selecting a cabinet from the provided `cabinets` prop.
+  - Saves selection to a cookie and dispatches a custom event to synchronize across components.
+
+- **`ExpandingCard` Component**
+  - Renders a card for each J station with:
+    - Charger ID
+    - Total sessions
+    - Total session time
+    - Summary chart showing daily session counts
+
+#### **Dependencies**
+
+- `React` & Hooks (`useState`, `useEffect`)
+- `axios` from `../services/api`: Handles HTTP requests to fetch charger summary data.
+- `js-cookie`: Persists selected cabinet ID across reloads.
+- `@mui/material`:
+  - `Select`, `MenuItem`, `InputLabel`, `CircularProgress`, `Grid`, `Container`, `Typography`: Used for form controls, layout, and feedback.
+- `CustomFormControl`: Wraps form inputs with consistent styling.
+- `ExpandingCard`: Custom component for expandable visual summaries.
+- `SummarySection` and `HistoryChart`: Present if data needs summarization or visualization (though not directly rendered in this file).
+
+#### **Summary**
+
+The `Jhealth.js` component delivers a cabinet-specific overview of J station activity within a user-friendly card interface. It supports persistent cabinet selection, real-time updates through custom events, and clear presentation of charger usage metrics for analytical insights.
+
+---
+
